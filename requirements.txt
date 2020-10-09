@@ -1,0 +1,6 @@
+mesa~=0.8.7
+gym~=0.17.3
+asyncio~=3.4.3
+numpy~=1.19.1
+stable-baselines~=2.10.1
+tensorflow~=1.15.0
