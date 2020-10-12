@@ -76,6 +76,7 @@ def state_to_model(state):
             "pos": (values["x"], values["y"]),
             "direction":  Direction[values["direction"].upper()],
             })
+    # TODO: doesnt work with global import, cyclic import?
     from src.model.model import SpeedModel
     from src.model.agents import AgentDummy
     model = SpeedModel(width, height, nb_agents, initial_params, [AgentDummy for i in range(nb_agents)])
