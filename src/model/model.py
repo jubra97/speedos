@@ -28,7 +28,10 @@ class SpeedModel(Model):
 
         self.schedule = SimultaneousActivation(self)
         self.grid = MultiGrid(width, height, True)
-        self.cells = np.zeros((width, height))
+        # width and height are swapped since height is rows and width is columns
+        # an alternative to this representation would be to transpose cells everytime it is exposed
+        # but that could be inefficient
+        self.cells = np.zeros((height, width))
 
         # Init initial agents
         self.speed_agents = []
@@ -72,7 +75,8 @@ class SpeedModel(Model):
                 cell_contents = self.grid.get_cell_list_contents(t)
                 if len(cell_contents) > 1:
                     agent.set_inactive()
-                    self.cells[t] = -1
+                    # swapped position args since cells has the format (height, width)
+                    self.cells[t[1], t[0]] = -1
 
     def check_game_finished(self):
         """
@@ -103,10 +107,12 @@ class SpeedModel(Model):
         """
         self.schedule.add(agent)
         self.grid.place_agent(agent, agent.pos)
-        if type(agent) is SpeedAgent:
-            self.cells[agent.pos] = agent.unique_id
-        elif type(agent) is AgentTrace:
-            self.cells[agent.pos] = agent.origin.unique_id
+        # swapped position args since cells has the format (height, width)
+        pos = (agent.pos[1], agent.pos[0])
+        if isinstance(agent, SpeedAgent):
+            self.cells[pos] = agent.unique_id
+        elif isinstance(agent, AgentTrace):
+            self.cells[pos] = agent.origin.unique_id
 
     def remove_agent(self, agent):
         """
