@@ -2,13 +2,9 @@ from mesa.visualization.modules import CanvasGrid
 from mesa.visualization.modules.TextVisualization import TextElement
 from mesa.visualization.UserParam import UserSettableParameter
 from mesa.visualization.ModularVisualization import ModularServer
-from asyncio import set_event_loop_policy, WindowsSelectorEventLoopPolicy
+from asyncio import set_event_loop_policy
 from src.model.model import SpeedModel
 from src.model.agents import SpeedAgent, AgentTrace
-
-
-# Needed to resolve a NotImplementedError
-set_event_loop_policy(WindowsSelectorEventLoopPolicy())
 
 
 def agent_portrayal(agent):
