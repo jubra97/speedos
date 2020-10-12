@@ -1,12 +1,14 @@
 from mesa import Agent
 from abc import abstractmethod
 from src.model.utils import Direction, Action, get_state
+import numpy as np
 
 
 class SpeedAgent(Agent):
     """
     Abstract representation of an Agent in Speed.
     """
+
     def __init__(self, model, pos, direction, speed=1, active=True):
         """
         :param model: The model that the agent lives in.
@@ -22,7 +24,7 @@ class SpeedAgent(Agent):
         self.active = active
 
         self.action = None
-        self.trace = []     # Holds all cells that were visited in the last step
+        self.trace = []  # Holds all cells that were visited in the last step
         self.elimination_step = -1  # Saves the step that the agent was eliminated in (-1 if still active)
 
     @abstractmethod
@@ -85,9 +87,9 @@ class SpeedAgent(Agent):
         for i in range(self.speed):
             # update position
             if self.direction == Direction.UP:
-                new_y += 1
-            elif self.direction == Direction.DOWN:
                 new_y -= 1
+            elif self.direction == Direction.DOWN:
+                new_y += 1
             elif self.direction == Direction.LEFT:
                 new_x -= 1
             elif self.direction == Direction.RIGHT:
@@ -127,6 +129,7 @@ class AgentTrace(Agent):
     """
     Static trace element of an Agent that occupies one cell.
     """
+
     def __init__(self, model, pos, origin):
         """
         :param model: The model that the trace exists in.
@@ -152,3 +155,63 @@ class RandomAgent(SpeedAgent):
         elif own_props["speed"] == 10:
             possible_actions.remove(Action.SPEED_UP)
         return self.random.choice(possible_actions)
+
+
+class ValidationAgent(SpeedAgent):
+    # Changes in Model and Agents:
+    # Change sign of Direction.UP and Direction.DOWN
+    # swap height and width var in model
+    # terminate game if one player is left
+    # agent wird auf leeres spielfeld ausgeführt, soll das so?
+    def __init__(self, model, pos, direction, game):
+        super().__init__(model, pos, direction)
+        self.org_game = game
+
+    def get_action(self, id):
+        current_speed = self.org_game[self.model.schedule.steps]["players"][id]["speed"]
+        if len(self.org_game) == self.model.schedule.steps:
+            return Action.CHANGE_NOTHING
+        next_speed = self.org_game[self.model.schedule.steps + 1]["players"][id]["speed"]
+        current_direction = Direction[
+            self.org_game[self.model.schedule.steps]["players"][id]["direction"].upper()].value
+        next_direction = Direction[
+            self.org_game[self.model.schedule.steps + 1]["players"][id]["direction"].upper()].value
+        if current_speed - next_speed == -1:
+            return Action.SPEED_UP
+        elif current_speed - next_speed == 1:
+            return Action.SLOW_DOWN
+        elif current_direction - next_direction == -1 or current_direction - next_direction == 3:
+            return Action.TURN_RIGHT
+        elif current_direction - next_direction == 1 or current_direction - next_direction == -3:
+            return Action.TURN_LEFT
+        else:
+            return Action.CHANGE_NOTHING
+
+    def compare_with_org_game(self, state):
+        # print(f"Length of org game: {len(self.org_game)}")
+        # print(f"Current Step: {self.model.schedule.steps}")
+        #
+        # #print(state["you"])
+        #
+        # if (state["you"]) == 1:
+        #     print("____________________________")
+        #     print(self.org_game[self.model.schedule.steps]["players"][str(state["you"])])
+        #     print(state["players"][str(state["you"])])
+        org_cells = np.array(self.org_game[self.model.schedule.steps-1]["cells"], dtype="float64")
+        if self.model.schedule.steps-1 == -1:
+            org_cells = np.zeros((50, 47))
+        current_cells = self.model.cells
+        compared = org_cells==current_cells
+        #print(org_cells == current_cells)
+        if (org_cells == current_cells).all():
+            print("CELLS ARE SAME")
+        # else:
+        #     print(org_cells)
+        #     print(current_cells)
+
+    def act(self, state):
+        self.compare_with_org_game(state)
+        #action = self.get_action(str(state["you"]))
+        # if (state["you"]) == 1:
+        #     print(action)
+        return None
