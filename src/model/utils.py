@@ -53,6 +53,18 @@ def get_state(model, agent):
     return state
 
 
+def arg_maxes(arr, indices=None):
+    maxes = []
+    maximum = max(arr)
+    for idx, el in enumerate(arr):
+        if el == maximum:
+            if indices:
+                maxes.append(indices[idx])
+            else:
+                maxes.append(idx)
+    return maxes
+
+
 def state_to_model(state):
     width = state["width"]
     height = state["height"]

@@ -1,14 +1,13 @@
 from mesa import Agent
 from abc import abstractmethod
-from src.model.utils import Direction, Action, get_state
-import numpy as np
+from itertools import permutations
+from src.model.utils import Direction, Action, get_state, arg_maxes
 
 
 class SpeedAgent(Agent):
     """
     Abstract representation of an Agent in Speed.
     """
-
     def __init__(self, model, pos, direction, speed=1, active=True):
         """
         :param model: The model that the agent lives in.
@@ -24,7 +23,7 @@ class SpeedAgent(Agent):
         self.active = active
 
         self.action = None
-        self.trace = []  # Holds all cells that were visited in the last step
+        self.trace = []     # Holds all cells that were visited in the last step
         self.elimination_step = -1  # Saves the step that the agent was eliminated in (-1 if still active)
 
     @abstractmethod
@@ -62,6 +61,7 @@ class SpeedAgent(Agent):
             self.speed -= 1
         elif self.action == Action.SPEED_UP:
             self.speed += 1
+
         self.move()
 
     def move(self):
@@ -127,11 +127,23 @@ class SpeedAgent(Agent):
         self.elimination_step = self.model.schedule.steps + 1
 
 
+class AgentDummy(SpeedAgent):
+    """
+    Agent dummy for reinforcement learning.
+    It doesn't choose and set an action since the Gym environment controls the execution.
+    """
+
+    def act(self, state):
+        return None
+
+    def step(self):
+        pass
+
+
 class AgentTrace(Agent):
     """
     Static trace element of an Agent that occupies one cell.
     """
-
     def __init__(self, model, pos, origin):
         """
         :param model: The model that the trace exists in.
@@ -157,6 +169,32 @@ class RandomAgent(SpeedAgent):
         elif own_props["speed"] == 10:
             possible_actions.remove(Action.SPEED_UP)
         return self.random.choice(possible_actions)
+
+
+class OneStepSurvivalAgent(SpeedAgent):
+    """
+    Agent that chooses random actions.
+    """
+
+    def act(self, state):
+        own_id = state["you"]
+        survival = dict.fromkeys(list(Action), 0)
+        model = state_to_model(state)
+
+        nb_active_agents = len(model.active_speed_agents)
+        action_permutations = list(permutations(list(Action), nb_active_agents))
+        for action_permutation in action_permutations:
+            own_agent = model.get_agent_by_id(own_id)
+            for idx, agent in enumerate(model.active_speed_agents):
+                agent.action = action_permutation[idx]
+
+            model.step()
+            if own_agent.active:
+                survival[own_agent.action] += 1
+            model = state_to_model(state)
+
+        return arg_maxes(survival.values(), list(survival.keys()))
+
 
 
 class ValidationAgent(SpeedAgent):

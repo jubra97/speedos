@@ -123,3 +123,9 @@ class SpeedModel(Model):
         """
         self.schedule.remove(agent)
         self.grid.remove_agent(agent)
+
+    def get_agent_by_id(self, unique_id):
+        for agent in self.speed_agents:
+            if agent.unique_id == unique_id:
+                return agent
+        return None
