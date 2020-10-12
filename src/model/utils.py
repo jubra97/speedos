@@ -51,3 +51,15 @@ def get_state(model, agent):
     state = model_to_json(model)
     state["you"] = agent.unique_id
     return state
+
+
+def arg_maxes(arr, indices=None):
+    maxes = []
+    maximum = max(arr)
+    for idx, el in enumerate(arr):
+        if el == maximum:
+            if indices:
+                maxes.append(indices[idx])
+            else:
+                maxes.append(idx)
+    return maxes
