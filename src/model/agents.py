@@ -2,6 +2,7 @@ from mesa import Agent
 from abc import abstractmethod
 from itertools import permutations
 from src.model.utils import Direction, Action, get_state, arg_maxes, state_to_model
+import numpy as np
 
 
 class SpeedAgent(Agent):
@@ -104,7 +105,7 @@ class SpeedAgent(Agent):
 
             # create trace
             # trace gaps occur every 6 rounds if the speed is higher than 2.
-            if (self.model.schedule.steps + 1) % 6 != 0 or self.speed < 3 or i == 0:
+            if (self.model.schedule.steps + 1) % 6 != 0 or self.speed < 3 or i == 0 or i == 1:
                 self.model.add_agent(AgentTrace(self.model, old_pos, self))
                 self.trace.append(new_pos)
 
@@ -196,18 +197,20 @@ class OneStepSurvivalAgent(SpeedAgent):
         return arg_maxes(survival.values(), list(survival.keys()))
 
 
-
 class ValidationAgent(SpeedAgent):
     # Changes in Model and Agents:
     # Change sign of Direction.UP and Direction.DOWN
     # swap height and width var in model
     # terminate game if one player is left
     # agent wird auf leeres spielfeld ausgeführt, soll das so?
-    def __init__(self, model, pos, direction, game):
-        super().__init__(model, pos, direction)
+    def __init__(self, model, pos, direction, speed, active, game):
+        super().__init__(model, pos, direction, speed, active)
         self.org_game = game
+        self.last_state = []
 
     def get_action(self, id):
+        # if self.model.schedule.steps+1 >= len(self.org_game):
+        #     return None
         current_speed = self.org_game[self.model.schedule.steps]["players"][id]["speed"]
         next_speed = self.org_game[self.model.schedule.steps + 1]["players"][id]["speed"]
         current_direction = Direction[
@@ -218,45 +221,34 @@ class ValidationAgent(SpeedAgent):
             return Action.SPEED_UP
         elif current_speed - next_speed == 1:
             return Action.SLOW_DOWN
-        elif current_direction - next_direction == -1 or current_direction - next_direction == 3:
+        elif (current_direction - next_direction) % 4 == 3:
             return Action.TURN_RIGHT
-        elif current_direction - next_direction == 1 or current_direction - next_direction == -3:
+        elif (current_direction - next_direction) % 4 == 1:
             return Action.TURN_LEFT
-        else:
+        elif (current_direction - next_direction) == 0:
             return Action.CHANGE_NOTHING
+        else:
+            raise AttributeError("Not allowed change of direction!")
 
     def compare_with_org_game(self, state):
-        # #print(f"Length of org game: {len(self.org_game)}")
-        #
-        # #
-        # # #print(state["you"])
-        # #
-        # if (state["you"]) == 2:
-        #     print("____________________________")
-        #     print(f"Current Step: {self.model.schedule.steps}")
-        #     print(self.org_game[self.model.schedule.steps]["players"][str(state["you"])])
-        #     print(state["players"][str(state["you"])])
-        #     org_cells = np.array(self.org_game[self.model.schedule.steps]["cells"], dtype="float64")
-        #     current_cells = self.model.cells
-        #     compared = org_cells==current_cells
-        #     # #print(org_cells == current_cells)
-        #     if (org_cells == current_cells).all():
-        #        print("CELLS ARE SAME")
-        # # else:
-        # #     print(org_cells)
-        # #     print(current_cells)
-        #if self.org_game[self.model.schedule.steps]['players'][str(state['you'])] != state['players'][str(state['you'])]:
-        if self.model.schedule.steps == 13 or self.org_game[self.model.schedule.steps]['players'][str(state['you'])] != state['players'][str(state['you'])]:
-            print("__________________________")
-            print(f"{str(state['you'])}")
+        org_cells = np.array(self.org_game[self.model.schedule.steps]["cells"], dtype="float64")
+        current_cells = self.model.cells
+        if not (current_cells == org_cells).all():
+            print(f"CELLS DO NOT MATCH in Step {self.model.schedule.steps} for agent {state['you']}")
+
+        if self.org_game[self.model.schedule.steps]['players'][str(state['you'])] != state['players'][str(state['you'])]:
+            print("__________")
+            print(f"STATES DO NOT MATCH in Step {self.model.schedule.steps} for agent {state['you']}")
+            print(f"Org State: {self.org_game[self.model.schedule.steps]['players'][str(state['you'])]}")
+            print(f"Sim State: {state['players'][str(state['you'])]}")
+            print("__________")
+
+        if self.model.schedule.steps == 165:
             print(f"Org State: {self.org_game[self.model.schedule.steps]['players'][str(state['you'])]}")
             print(f"Sim State: {state['players'][str(state['you'])]}")
 
     def act(self, state):
+        # TODO: Compare with inactive agents, Is last step compared?
         self.compare_with_org_game(state)
         action = self.get_action(str(state["you"]))
-        # if (state["you"]) == 1:
-        #     print(action)
-        if self.model.schedule.steps == 13 or self.org_game[self.model.schedule.steps]['players'][str(state['you'])] != state['players'][str(state['you'])]:
-            print(action)
         return action

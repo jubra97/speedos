@@ -66,18 +66,24 @@ def arg_maxes(arr, indices=None):
     return maxes
 
 
-def state_to_model(state):
+def state_to_model(state, agent_class=None, additional_params=None):
     width = state["width"]
     height = state["height"]
     nb_agents = len(state["players"])
     initial_params = []
-    for values in state["players"].values():
+    for i, values in enumerate(state["players"].values()):
         initial_params.append({
             "pos": (values["x"], values["y"]),
             "direction":  Direction[values["direction"].upper()],
+            "speed": values["speed"],
+            "active": values["active"]
             })
+        initial_params[i] = {**initial_params[i], **additional_params[i]}
+
     # TODO: doesnt work with global import, cyclic import?
     from src.model.model import SpeedModel
     from src.model.agents import AgentDummy
-    model = SpeedModel(width, height, nb_agents, initial_params, [AgentDummy for i in range(nb_agents)])
+    if agent_class is None:
+        agent_class = AgentDummy
+    model = SpeedModel(width, height, nb_agents, initial_params, [agent_class for i in range(nb_agents)])
     return model
