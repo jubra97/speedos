@@ -1,5 +1,6 @@
 from enum import Enum
-from .model import SpeedModel
+
+
 
 class Direction(Enum):
     UP = 0
@@ -75,5 +76,7 @@ def state_to_model(state):
             "pos": (values["x"], values["y"]),
             "direction":  Direction[values["direction"].upper()],
             })
-    model = SpeedModel(width, height, nb_agents, initial_params, [ValidationAgent for i in range(nb_agents)])
+    from src.model.model import SpeedModel
+    from src.model.agents import AgentDummy
+    model = SpeedModel(width, height, nb_agents, initial_params, [AgentDummy for i in range(nb_agents)])
     return model
