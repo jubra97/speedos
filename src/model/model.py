@@ -27,7 +27,10 @@ class SpeedModel(Model):
             initial_agents_params = [{} for i in range(nb_agents)]
 
         self.schedule = SimultaneousActivation(self)
-        self.grid = MultiGrid(height, width, True)
+        self.grid = MultiGrid(width, height, True)
+        # width and height are swapped since height is rows and width is columns
+        # an alternative to this representation would be to transpose cells everytime it is exposed
+        # but that could be inefficient
         self.cells = np.zeros((height, width))
 
         # Init initial agents
@@ -72,14 +75,15 @@ class SpeedModel(Model):
                 cell_contents = self.grid.get_cell_list_contents(t)
                 if len(cell_contents) > 1:
                     agent.set_inactive()
-                    self.cells[t] = -1
+                    # swapped position args since cells has the format (height, width)
+                    self.cells[t[1], t[0]] = -1
 
     def check_game_finished(self):
         """
         Checks whether or not the game has finished (every agent is eliminated) and prints the result if finished.
         :return: None
         """
-        if len(self.active_speed_agents) == 1:
+        if len(self.active_speed_agents) == 0:
             self.running = False
             if self.verbose:
                 self.print_standings()
@@ -103,10 +107,12 @@ class SpeedModel(Model):
         """
         self.schedule.add(agent)
         self.grid.place_agent(agent, agent.pos)
+        # swapped position args since cells has the format (height, width)
+        pos = (agent.pos[1], agent.pos[0])
         if isinstance(agent, SpeedAgent):
-            self.cells[agent.pos] = agent.unique_id
+            self.cells[pos] = agent.unique_id
         elif isinstance(agent, AgentTrace):
-            self.cells[agent.pos] = agent.origin.unique_id
+            self.cells[pos] = agent.origin.unique_id
 
     def remove_agent(self, agent):
         """

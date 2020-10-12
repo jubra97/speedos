@@ -109,7 +109,10 @@ class SpeedAgent(Agent):
                 self.model.add_agent(AgentTrace(self.model, old_pos, self))
                 self.trace.append(new_pos)
 
-        self.model.grid.move_agent(self, new_pos if reached_new_pos else old_pos)
+        pos = new_pos if reached_new_pos else old_pos
+        self.model.grid.move_agent(self, pos)
+        # swapped position args since cells has the format (height, width)
+        self.model.cells[pos[1], pos[0]] = self.unique_id
 
     def valid_speed(self):
         return 1 <= self.speed <= 10

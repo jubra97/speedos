@@ -59,7 +59,7 @@ class SingleAgentSpeedEnv(Env):
 
     def render(self, mode='ansi'):
         if mode == 'ansi':
-            print(np.flip(np.asarray(self.state["cells"]).T, 0), "\n")
+            print(self.state["cells"], "\n")
             print(self.agent.action, "\n")
             if not self.agent.active:
                 self.model.print_standings()
