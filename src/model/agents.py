@@ -62,7 +62,6 @@ class SpeedAgent(Agent):
             self.speed -= 1
         elif self.action == Action.SPEED_UP:
             self.speed += 1
-
         self.move()
 
     def move(self):
@@ -172,8 +171,6 @@ class ValidationAgent(SpeedAgent):
 
     def get_action(self, id):
         current_speed = self.org_game[self.model.schedule.steps]["players"][id]["speed"]
-        if len(self.org_game) == self.model.schedule.steps:
-            return Action.CHANGE_NOTHING
         next_speed = self.org_game[self.model.schedule.steps + 1]["players"][id]["speed"]
         current_direction = Direction[
             self.org_game[self.model.schedule.steps]["players"][id]["direction"].upper()].value
@@ -191,30 +188,37 @@ class ValidationAgent(SpeedAgent):
             return Action.CHANGE_NOTHING
 
     def compare_with_org_game(self, state):
-        # print(f"Length of org game: {len(self.org_game)}")
-        # print(f"Current Step: {self.model.schedule.steps}")
+        # #print(f"Length of org game: {len(self.org_game)}")
         #
-        # #print(state["you"])
-        #
-        # if (state["you"]) == 1:
+        # #
+        # # #print(state["you"])
+        # #
+        # if (state["you"]) == 2:
         #     print("____________________________")
+        #     print(f"Current Step: {self.model.schedule.steps}")
         #     print(self.org_game[self.model.schedule.steps]["players"][str(state["you"])])
         #     print(state["players"][str(state["you"])])
-        org_cells = np.array(self.org_game[self.model.schedule.steps-1]["cells"], dtype="float64")
-        if self.model.schedule.steps-1 == -1:
-            org_cells = np.zeros((50, 47))
-        current_cells = self.model.cells
-        compared = org_cells==current_cells
-        #print(org_cells == current_cells)
-        if (org_cells == current_cells).all():
-            print("CELLS ARE SAME")
-        # else:
-        #     print(org_cells)
-        #     print(current_cells)
+        #     org_cells = np.array(self.org_game[self.model.schedule.steps]["cells"], dtype="float64")
+        #     current_cells = self.model.cells
+        #     compared = org_cells==current_cells
+        #     # #print(org_cells == current_cells)
+        #     if (org_cells == current_cells).all():
+        #        print("CELLS ARE SAME")
+        # # else:
+        # #     print(org_cells)
+        # #     print(current_cells)
+        #if self.org_game[self.model.schedule.steps]['players'][str(state['you'])] != state['players'][str(state['you'])]:
+        if self.model.schedule.steps == 13 or self.org_game[self.model.schedule.steps]['players'][str(state['you'])] != state['players'][str(state['you'])]:
+            print("__________________________")
+            print(f"{str(state['you'])}")
+            print(f"Org State: {self.org_game[self.model.schedule.steps]['players'][str(state['you'])]}")
+            print(f"Sim State: {state['players'][str(state['you'])]}")
 
     def act(self, state):
         self.compare_with_org_game(state)
-        #action = self.get_action(str(state["you"]))
+        action = self.get_action(str(state["you"]))
         # if (state["you"]) == 1:
         #     print(action)
-        return None
+        if self.model.schedule.steps == 13 or self.org_game[self.model.schedule.steps]['players'][str(state['you'])] != state['players'][str(state['you'])]:
+            print(action)
+        return action

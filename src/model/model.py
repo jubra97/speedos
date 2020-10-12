@@ -60,6 +60,7 @@ class SpeedModel(Model):
         """
         if self.data_collector:
             self.data_collector.collect(self)
+        print(f"STEP: {self.schedule.steps}")
         self.schedule.step()
         self.check_collisions()
         self.check_game_finished()

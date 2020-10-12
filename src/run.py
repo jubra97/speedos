@@ -11,6 +11,12 @@ from src.model.agents import ValidationAgent
 def create_model_on_original_game(path):
     with open(path, "r") as file:
         game = json.load(file)
+    # for i in range(len(game)-1):
+    #     for j in range(i+1, len(game)-1):
+    #         if game[i]["deadline"] == game[j]["deadline"]:
+    #             print(f"Removing Entry with deadline {game[i]['deadline']}")
+    #             del game[i]
+
     width = game[0]["width"]
     height = game[0]["height"]
     nb_agents = len(game[0]["players"])
