@@ -1,5 +1,5 @@
 from enum import Enum
-
+from .model import SpeedModel
 
 class Direction(Enum):
     UP = 0
@@ -51,3 +51,17 @@ def get_state(model, agent):
     state = model_to_json(model)
     state["you"] = agent.unique_id
     return state
+
+
+def state_to_model(state):
+    width = state["width"]
+    height = state["height"]
+    nb_agents = len(state["players"])
+    initial_params = []
+    for values in state["players"].values():
+        initial_params.append({
+            "pos": (values["x"], values["y"]),
+            "direction":  Direction[values["direction"].upper()],
+            })
+    model = SpeedModel(width, height, nb_agents, initial_params, [ValidationAgent for i in range(nb_agents)])
+    return model
