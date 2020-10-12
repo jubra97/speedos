@@ -64,6 +64,7 @@ def arg_maxes(arr, indices=None):
                 maxes.append(idx)
     return maxes
 
+
 def state_to_model(state):
     width = state["width"]
     height = state["height"]
@@ -73,6 +74,8 @@ def state_to_model(state):
         initial_params.append({
             "pos": (values["x"], values["y"]),
             "direction":  Direction[values["direction"].upper()],
+            "speed": values["speed"],
+            "active": values["active"]
             })
     # TODO: doesnt work with global import, cyclic import?
     from src.model.model import SpeedModel

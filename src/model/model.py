@@ -2,7 +2,7 @@ from mesa import Model
 from mesa.time import SimultaneousActivation
 from mesa.space import MultiGrid
 import numpy as np
-from src.model.agents import SpeedAgent, AgentTrace, RandomAgent
+from src.model.agents import SpeedAgent, AgentTrace, RandomAgent, OneStepSurvivalAgent
 from src.model.utils import Direction
 
 
@@ -46,7 +46,7 @@ class SpeedModel(Model):
                 agent_params["direction"] = self.random.choice(list(Direction))
 
             if agent_classes is None:
-                agent = RandomAgent(**agent_params)
+                agent = OneStepSurvivalAgent(**agent_params)
             else:
                 agent = agent_classes[i](**agent_params)
             self.add_agent(agent)

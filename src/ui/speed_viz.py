@@ -48,8 +48,8 @@ def agent_portrayal(agent):
 
 
 # Parameters
-WIDTH = 6
-HEIGHT = 6
+WIDTH = 40
+HEIGHT = 40
 COLOR_PALETTE = [
     'green',
     'blue',
