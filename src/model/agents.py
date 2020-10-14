@@ -1,7 +1,7 @@
 from mesa import Agent
 from abc import abstractmethod
 from itertools import permutations
-from src.model.utils import Direction, Action, get_state, arg_maxes, state_to_model
+from src.utils import Direction, Action, get_state, arg_maxes, state_to_model
 import numpy as np
 
 

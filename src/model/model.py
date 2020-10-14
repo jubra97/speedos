@@ -2,8 +2,8 @@ from mesa import Model
 from mesa.time import SimultaneousActivation
 from mesa.space import MultiGrid
 import numpy as np
-from src.model.agents import SpeedAgent, AgentTrace, RandomAgent, OneStepSurvivalAgent
-from src.model.utils import Direction
+from src.model.agents import SpeedAgent, AgentTrace, OneStepSurvivalAgent
+from src.utils import Direction
 
 
 class SpeedModel(Model):
@@ -31,7 +31,7 @@ class SpeedModel(Model):
         # width and height are swapped since height is rows and width is columns
         # an alternative to this representation would be to transpose cells everytime it is exposed
         # but that could be inefficient
-        self.cells = np.zeros((height, width))
+        self.cells = np.zeros((height, width), dtype=np.int)
 
         # Init initial agents
         self.speed_agents = []

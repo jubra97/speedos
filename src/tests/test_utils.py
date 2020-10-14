@@ -1,6 +1,6 @@
 import unittest
 from mesa import Model
-from src.model.utils import *
+from src.utils import *
 from src.model.agents import SpeedAgent
 
 

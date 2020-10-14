@@ -1,11 +1,10 @@
+from gym import Env, spaces
 import numpy as np
 
-from gym import Env, spaces
-
 from src.model.model import SpeedModel
-from src.model.agents import SpeedAgent
-from src.model.utils import Action, Direction
-from src.model.utils import get_state
+from src.model.agents import AgentDummy
+from src.utils import Action, Direction
+from src.utils import get_state
 from src.rl.gym.rewards import LongSurvivalReward
 
 
@@ -17,8 +16,9 @@ class SingleAgentSpeedEnv(Env):
         self.width = width
         self.height = height
         self.action_space = spaces.Discrete(len(Action))
-        #self.observation_space = spaces.Box(low=-1, high=1, shape=(width, height), dtype=int)
-        self.observation_space = spaces.Box(low=0, high=2, shape=(2,), dtype=int)
+        lows = np.asarray([*np.full(width * height, -1), 0, 1])
+        highs = np.asarray([*np.full(width * height, 1), len(Direction) - 1, 10])
+        self.observation_space = spaces.Box(low=lows, high=highs, dtype=np.int)
         self.reward = reward
         self.reward_range = reward.reward_range
         self.state = None
@@ -32,13 +32,9 @@ class SingleAgentSpeedEnv(Env):
         return [seed]
 
     def reset(self):
-        # Todo: This is simplified for testing atm (The initial position and direction should not be predefined)
-        agent_params = {
-            "pos": (2, 2),
-            "direction": Direction.UP
-        }
-        self.model = SpeedModel(self.width, self.height, nb_agents=1, initial_agents_params=[agent_params],
-                                agent_classes=[RLAgent], verbose=False)
+        # Use an AgentDummy since the Gym environment controls the execution.
+        self.model = SpeedModel(self.width, self.height, nb_agents=1, #initial_agents_params=[agent_params],
+                                agent_classes=[AgentDummy], verbose=False)
         self.seed()
         self.agent = self.model.speed_agents[0]
         self.state = get_state(self.model, self.agent)
@@ -59,8 +55,8 @@ class SingleAgentSpeedEnv(Env):
 
     def render(self, mode='ansi'):
         if mode == 'ansi':
-            print(self.state["cells"], "\n")
             print(self.agent.action, "\n")
+            print(self.state["cells"], "\n")
             if not self.agent.active:
                 self.model.print_standings()
         else:
@@ -71,18 +67,10 @@ class SingleAgentSpeedEnv(Env):
 
     @property
     def prepared_state(self):
-        #return self.state["cells"]
-        return self.agent.pos
-
-
-class RLAgent(SpeedAgent):
-    """
-    Agent dummy for reinforcement learning.
-    It doesn't choose and set an action since the Gym environment controls the execution.
-    """
-
-    def act(self, state):
-        return None
-
-    def step(self):
-        pass
+        # Todo: Round % 6 counter missing
+        # Format: [cells, direction, speed]
+        return np.asarray([
+            *np.asarray(self.state["cells"]).flatten(),
+            Direction[self.state["players"]["1"]["direction"].upper()].value,
+            self.state["players"]["1"]["speed"]
+        ])
