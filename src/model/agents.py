@@ -1,7 +1,7 @@
 from mesa import Agent
 from abc import abstractmethod
 from itertools import permutations
-from src.model.utils import Direction, Action, get_state, arg_maxes, state_to_model
+from src.model.utils import Direction, Action, get_state, arg_maxes, state_to_model, compare_grid_with_cells
 import numpy as np
 
 
@@ -114,6 +114,7 @@ class SpeedAgent(Agent):
         # swapped position args since cells has the format (height, width)
         self.model.cells[pos[1], pos[0]] = self.unique_id
 
+        print(f"Agent {self.unique_id} took action {self.action} with speed {self.speed}")
     def valid_speed(self):
         return 1 <= self.speed <= 10
 
@@ -154,6 +155,15 @@ class AgentTrace(Agent):
         super().__init__(model.next_id(), model)
         self.pos = pos
         self.origin = origin
+        self.creation_step = self.model.schedule.steps
+
+
+class AgentTraceCollision(AgentTrace):
+    """
+    Static Agent to mark a Collision. Agent_id is always -1.
+    """
+    def __init__(self, model, pos):
+        super().__init__(model, pos, None)
 
 
 class RandomAgent(SpeedAgent):
@@ -198,19 +208,16 @@ class OneStepSurvivalAgent(SpeedAgent):
 
 
 class ValidationAgent(SpeedAgent):
-    # Changes in Model and Agents:
-    # Change sign of Direction.UP and Direction.DOWN
-    # swap height and width var in model
-    # terminate game if one player is left
-    # agent wird auf leeres spielfeld ausgeführt, soll das so?
-    def __init__(self, model, pos, direction, speed, active, game):
+
+    def __init__(self, model, pos, direction, speed, active, game, checker_agent):
         super().__init__(model, pos, direction, speed, active)
         self.org_game = game
-        self.last_state = []
+        self.state_list = []
+        self.checker_agent = checker_agent
 
     def get_action(self, id):
-        # if self.model.schedule.steps+1 >= len(self.org_game):
-        #     return None
+        if self.model.schedule.steps+1 >= len(self.org_game):
+            return None
         current_speed = self.org_game[self.model.schedule.steps]["players"][id]["speed"]
         next_speed = self.org_game[self.model.schedule.steps + 1]["players"][id]["speed"]
         current_direction = Direction[
@@ -234,21 +241,29 @@ class ValidationAgent(SpeedAgent):
         org_cells = np.array(self.org_game[self.model.schedule.steps]["cells"], dtype="float64")
         current_cells = self.model.cells
         if not (current_cells == org_cells).all():
-            print(f"CELLS DO NOT MATCH in Step {self.model.schedule.steps} for agent {state['you']}")
+            print(f"CELLS DO NOT MATCH in Step {self.model.schedule.steps}")
 
-        if self.org_game[self.model.schedule.steps]['players'][str(state['you'])] != state['players'][str(state['you'])]:
+        if self.org_game[self.model.schedule.steps]['players'] != state['players']:
             print("__________")
-            print(f"STATES DO NOT MATCH in Step {self.model.schedule.steps} for agent {state['you']}")
-            print(f"Org State: {self.org_game[self.model.schedule.steps]['players'][str(state['you'])]}")
-            print(f"Sim State: {state['players'][str(state['you'])]}")
+            print(f"STATES DO NOT MATCH in Step {self.model.schedule.steps}")
+            print(f"Org State: {self.org_game[self.model.schedule.steps]['players']}")
+            print(f"Sim State: {state['players']}")
             print("__________")
-
-        if self.model.schedule.steps == 165:
-            print(f"Org State: {self.org_game[self.model.schedule.steps]['players'][str(state['you'])]}")
-            print(f"Sim State: {state['players'][str(state['you'])]}")
 
     def act(self, state):
         # TODO: Compare with inactive agents, Is last step compared?
-        self.compare_with_org_game(state)
+        if state["you"] == self.checker_agent:
+            print(f"CHECK FOR STEP {self.model.schedule.steps}")
+            self.compare_with_org_game(state)
+            compare_grid_with_cells(self.model)
+            self.state_list.append(state)
+            if self.model.schedule.steps == len(self.org_game)-1:
+                for entry in self.org_game:
+                    entry.pop("deadline", None)
+                    a = np.array(entry["cells"])
+                    entry["cells"] = a
+                print(self.state_list[0])
+                print(self.org_game[0])
+                print(self.state_list[0] == self.org_game[0])
         action = self.get_action(str(state["you"]))
         return action
