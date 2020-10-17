@@ -1,5 +1,5 @@
 from enum import Enum
-
+import numpy as np
 
 
 class Direction(Enum):
@@ -24,7 +24,10 @@ class Action(Enum):
 
 
 def agent_to_json(agent):
-    x, y = agent.pos
+    try:
+        x, y = agent.pos
+    except:
+        print(agent)
     return {
         "x": x,
         "y": y,
@@ -66,7 +69,7 @@ def arg_maxes(arr, indices=None):
     return maxes
 
 
-def state_to_model(state, agent_class=None, additional_params=None):
+def state_to_model(state, initialize_cells=False, agent_classes=None, additional_params=None):
     width = state["width"]
     height = state["height"]
     nb_agents = len(state["players"])
@@ -78,12 +81,36 @@ def state_to_model(state, agent_class=None, additional_params=None):
             "speed": values["speed"],
             "active": values["active"]
             })
-        initial_params[i] = {**initial_params[i], **additional_params[i]}
+        if additional_params is not None:
+            initial_params[i] = {**initial_params[i], **additional_params[i]}
 
     # TODO: doesnt work with global import, cyclic import?
     from src.model.model import SpeedModel
     from src.model.agents import AgentDummy
-    if agent_class is None:
-        agent_class = AgentDummy
-    model = SpeedModel(width, height, nb_agents, initial_params, [agent_class for i in range(nb_agents)])
+    if agent_classes is None:
+        agent_classes = [AgentDummy for i in range(nb_agents)]
+    model = SpeedModel(width, height, nb_agents, state["cells"] if not initialize_cells else None, initial_params, agent_classes)
     return model
+
+
+def compare_grid_with_cells(model):
+    from src.model.agents import AgentTrace, AgentTraceCollision
+    grid_as_np_array = np.empty((model.height, model.width), dtype="int")
+    for entry, x, y in model.grid.coord_iter():
+        if len(entry) == 0:
+            grid_as_np_array[y, x] = 0
+        elif len(entry) == 1:
+            agent = next(iter(entry))
+            if isinstance(agent, AgentTraceCollision):
+                grid_as_np_array[y, x] = -1
+            elif isinstance(agent, AgentTrace):
+                grid_as_np_array[y, x] = agent.origin.unique_id
+            else:
+                grid_as_np_array[y, x] = agent.unique_id
+        elif len(entry) > 1:
+            grid_as_np_array[y, x] = -1
+    print(model.cells)
+    print(grid_as_np_array)
+    if (model.cells != grid_as_np_array).any():
+        print(f"CELLS AND GRID DO NOT MATCH in Step {model.schedule.steps}")
+
