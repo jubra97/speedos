@@ -194,25 +194,8 @@ class RandomAgent(SpeedAgent):
 
 class OneStepSurvivalAgent(SpeedAgent):
     """
-    Agent that chooses random actions.
+    Agent that calculates the next step and chooses an action where he survives.
     """
-
-    def act(self, state):
-        own_id = state["you"]
-        own_props = state["players"][str(own_id)]
-        possible_actions = list(Action)
-        if own_props["speed"] == 1:
-            possible_actions.remove(Action.SLOW_DOWN)
-        elif own_props["speed"] == 10:
-            possible_actions.remove(Action.SPEED_UP)
-        return self.random.choice(possible_actions)
-
-
-class OneStepSurvivalAgent(SpeedAgent):
-    """
-    Agent that chooses random actions.
-    """
-
     def act(self, state):
         own_id = state["you"]
         survival = dict.fromkeys(list(Action), 0)
@@ -226,6 +209,30 @@ class OneStepSurvivalAgent(SpeedAgent):
                 agent.action = action_permutation[idx]
 
             model.step()
+            if own_agent.active:
+                survival[own_agent.action] += 1
+            model = state_to_model(state)
+
+        return np.random.choice(arg_maxes(survival.values(), list(survival.keys())))
+
+
+class NStepSurvivalAgent(SpeedAgent):
+    """
+    Agent that calculates the next steps and chooses an action where he survives.
+    """
+    def act(self, state, n):
+        own_id = state["you"]
+        survival = dict.fromkeys(list(Action), 0)
+        model = state_to_model(state)
+
+        nb_active_agents = len(model.active_speed_agents)
+        action_permutations = list(permutations(list(Action), nb_active_agents * n))
+        for action_permutation in action_permutations:
+            for s in range(n):
+                own_agent = model.get_agent_by_id(own_id)
+                for idx, agent in enumerate(model.active_speed_agents):
+                    agent.action = action_permutation[idx+s]
+                model.step()
             if own_agent.active:
                 survival[own_agent.action] += 1
             model = state_to_model(state)
