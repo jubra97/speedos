@@ -12,7 +12,7 @@ class SingleAgentSpeedEnv(Env):
 
     metadata = {'render.modes': ['human', 'ansi']}
 
-    def __init__(self, width=3, height=3, reward=LongSurvivalReward()):
+    def __init__(self, width=10, height=10, reward=LongSurvivalReward()):
         self.width = width
         self.height = height
         self.action_space = spaces.Discrete(len(Action))
@@ -69,8 +69,10 @@ class SingleAgentSpeedEnv(Env):
     def prepared_state(self):
         # Todo: Round % 6 counter missing
         # Format: [cells, direction, speed]
+        cells = self.state["cells"]
+        cells[self.state["players"]["1"]["y"]][self.state["players"]["1"]["x"]] = 2
         return np.asarray([
-            *np.asarray(self.state["cells"]).flatten(),
+            *np.asarray(cells).flatten(),
             Direction[self.state["players"]["1"]["direction"].upper()].value,
             self.state["players"]["1"]["speed"]
         ])
