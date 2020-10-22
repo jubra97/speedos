@@ -78,7 +78,6 @@ class SpeedModel(Model):
                         # add trace
                         agent = AgentTrace(self, (x, y), self.speed_agents[self.cells[y, x]-1])  # get agent based on id
                         self.add_agent(agent)
-        compare_grid_with_cells(self)
 
     def step(self):
         """
@@ -90,8 +89,6 @@ class SpeedModel(Model):
 
         self.check_collisions()
         self.check_game_finished()
-        print(self.schedule.steps)
-        compare_grid_with_cells(self)
         self.schedule.step()  # changed order to match original game
 
     def check_collisions(self):
@@ -116,7 +113,7 @@ class SpeedModel(Model):
         Checks whether or not the game has finished (every agent is eliminated) and prints the result if finished.
         :return: None
         """
-        if len(self.active_speed_agents) == 1:
+        if len(self.active_speed_agents) <= 1:
             self.running = False
             if self.verbose:
                 self.print_standings()
@@ -130,7 +127,7 @@ class SpeedModel(Model):
             lambda agent: {"ID: ": agent.unique_id, "Survived Steps: ": agent.elimination_step},
             self.speed_agents
         ))
-        print("Standings after {} rounds:\n".format(self.schedule.steps + 1), result)
+        print("Standings after {} rounds:\n".format(self.schedule.steps), result)
 
     def add_agent(self, agent):
         """
