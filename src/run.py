@@ -63,6 +63,7 @@ def run_against_original_game():
     loop.run_forever()
 
 
-#validate_with_original_game(os.path.abspath("..") + "/res/originalGames/spe_ed-1601974843093.json")
-#run_against_original_game()
+#validate_with_original_game(os.path.abspath("..") + "/res/originalGames/test_game.json")
+# validate_with_original_game(os.path.abspath("..") + "/res/originalGames/spe_ed-1601974843093.json")
+# run_against_original_game()
 

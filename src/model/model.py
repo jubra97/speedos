@@ -88,77 +88,28 @@ class SpeedModel(Model):
         if self.data_collector:
             self.data_collector.collect(self)
 
-        self.schedule.step()  # changed order to match original game
         self.check_collisions()
         self.check_game_finished()
         print(self.schedule.steps)
         compare_grid_with_cells(self)
-
-
+        self.schedule.step()  # changed order to match original game
 
     def check_collisions(self):
         """
         Checks every active agent for collisions with traces or other agents. Colliding agents are eliminated.
-        TODO: NOT WORKING CORRECTLY! agent with smaller id is set inactive even if just his tail got hit.
-         Maybe add Timestamp to AgentTrace to track witch agent visited the cell first.
         :return: None
         """
-
-        def set_inactive(agent):
-            if isinstance(agent, SpeedAgent):
-                print(f"Agent {agent.unique_id} lost.")
-                agent.set_inactive()
-            else:
-                print(f"Agent {agent.origin.unique_id} lost.")
-                agent.origin.set_inactive()
-
-        # the agent is eliminated if its trace (of the last step) overlaps with any other traces
-        for speed_agent in self.active_speed_agents:
-            for t in speed_agent.trace:
-                cell_contents = self.grid.get_cell_list_contents(t)
-                # if there are three agents in one cell all of them must be heads of speedagents
-                if len(cell_contents) > 2:
-                    for content in cell_contents:
-                        set_inactive(content)
-
-                    for content in cell_contents:
-                        self.remove_agent(content)
-                    self.add_agent(AgentTraceCollision(self, t))
-
-                    self.cells[t[1], t[0]] = -1
-                # collision
-                elif len(cell_contents) > 1:
-                    # compute which agents occupied the cell first and deactivate the agent that came later
-                    visit_step = []
-                    for content in cell_contents:
-                        if isinstance(content, SpeedAgent):
-                            visit_step.append(self.schedule.steps)
-                        else:
-                            visit_step.append(content.creation_step)
-                    if visit_step[0] == visit_step[1]:
-                        set_inactive(cell_contents[0])
-                        set_inactive(cell_contents[1])
-                    elif visit_step[0] > visit_step[1]:
-                        set_inactive(cell_contents[0])
-                    else:
-                        set_inactive(cell_contents[1])
-
-                    # swapped position args since cells has the format (height, width)
-                    for content in cell_contents:
-                        self.remove_agent(content)
-                    self.add_agent(AgentTraceCollision(self, t))
-
-                    self.cells[t[1], t[0]] = -1
-        """
+        agents_to_set_inactive = []
         for agent in self.active_speed_agents:
             for t in agent.trace:
                 cell_contents = self.grid.get_cell_list_contents(t)
                 if len(cell_contents) > 1:
-                    agent.set_inactive()
-                    # swapped position args since cells has the format (height, width)
-                    self.cells[t[1], t[0]] = -1
-                    
-        """
+                    if agent not in agents_to_set_inactive:
+                        agents_to_set_inactive.append(agent)
+                    self.add_agent(AgentTraceCollision(self, t))
+
+        for agent in agents_to_set_inactive:
+            agent.set_inactive()
 
     def check_game_finished(self):
         """
@@ -204,8 +155,9 @@ class SpeedModel(Model):
         :param agent: The agent to remove from the model
         :return: None
         """
-        self.schedule.remove(agent)
-        self.grid.remove_agent(agent)
+        if agent in self.schedule.agents:
+            self.schedule.remove(agent)
+            self.grid.remove_agent(agent)
 
     def get_agent_by_id(self, unique_id):
         for agent in self.speed_agents:

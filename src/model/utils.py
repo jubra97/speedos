@@ -24,10 +24,7 @@ class Action(Enum):
 
 
 def agent_to_json(agent):
-    try:
-        x, y = agent.pos
-    except:
-        print(agent)
+    x, y = agent.pos
     return {
         "x": x,
         "y": y,
