@@ -107,8 +107,10 @@ def compare_grid_with_cells(model):
                 grid_as_np_array[y, x] = agent.origin.unique_id
             else:
                 grid_as_np_array[y, x] = agent.unique_id
-        elif len(entry) > 1:
-            grid_as_np_array[y, x] = -1
+        elif len(entry) >= 2:
+            print("darf nicht")
+        # elif len(entry) > 1:
+        #     grid_as_np_array[y, x] = -1
     print(model.cells)
     print(grid_as_np_array)
     if (model.cells != grid_as_np_array).any():

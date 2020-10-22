@@ -3,7 +3,7 @@ import json
 import os
 from src.model.utils import Action, state_to_model
 from src.model.agents import ValidationAgent, RandomAgent, OneStepSurvivalAgent
-import websockets
+#import websockets
 import asyncio
 import random
 
