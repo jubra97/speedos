@@ -91,6 +91,11 @@ def state_to_model(state, initialize_cells=False, agent_classes=None, additional
 
 
 def compare_grid_with_cells(model):
+    """
+    Checks for differences between the cell and grid representation.
+    :param model: The model to be checked
+    :return:
+    """
     from src.model.agents import AgentTrace, AgentTraceCollision
     grid_as_np_array = np.empty((model.height, model.width), dtype="int")
     for entry, x, y in model.grid.coord_iter():
@@ -98,18 +103,17 @@ def compare_grid_with_cells(model):
             grid_as_np_array[y, x] = 0
         elif len(entry) == 1:
             agent = next(iter(entry))
-            if isinstance(agent, AgentTraceCollision):
+            if type(agent) is AgentTraceCollision:
                 grid_as_np_array[y, x] = -1
             elif isinstance(agent, AgentTrace):
                 grid_as_np_array[y, x] = agent.origin.unique_id
             else:
                 grid_as_np_array[y, x] = agent.unique_id
-        elif len(entry) >= 2:
-            print("darf nicht")
-        # elif len(entry) > 1:
-        #     grid_as_np_array[y, x] = -1
-    print(model.cells)
-    print(grid_as_np_array)
+        else:
+            if any(type(agent) is AgentTraceCollision for agent in entry) :
+                grid_as_np_array[y, x] = -1
+            else:
+                print("DARF NICHT")
     if (model.cells != grid_as_np_array).any():
         print(f"CELLS AND GRID DO NOT MATCH in Step {model.schedule.steps}")
 
