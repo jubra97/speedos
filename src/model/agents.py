@@ -9,6 +9,7 @@ class SpeedAgent(Agent):
     """
     Abstract representation of an Agent in Speed.
     """
+
     def __init__(self, model, pos, direction, speed=1, active=True):
         """
         :param model: The model that the agent lives in.
@@ -24,7 +25,7 @@ class SpeedAgent(Agent):
         self.active = active
 
         self.action = None
-        self.trace = []     # Holds all cells that were visited in the last step
+        self.trace = []  # Holds all cells that were visited in the last step
         self.elimination_step = -1  # Saves the step that the agent was eliminated in (-1 if still active)
 
     @abstractmethod
@@ -98,21 +99,31 @@ class SpeedAgent(Agent):
             new_pos = (new_x, new_y)
             # check borders and speed
             if self.model.grid.out_of_bounds(new_pos):
-                # remove agent and add the last trace
+                # add trace at last in front of bound if speed is slow
+                if (self.model.schedule.steps + 1) % 6 != 0 or i == 1 or i == 0:
+                    self.model.add_agent(AgentTrace(self.model, old_pos, self))
+                    self.trace.append(old_pos)
+                # remove agent from grid
+                self.model.grid.remove_agent(self)
+                # set pos for matching with original game
+                self.pos = (new_x, new_y)
                 self.set_inactive()
                 reached_new_pos = False
                 break
 
             # create trace
             # trace gaps occur every 6 rounds if the speed is higher than 2.
-            if (self.model.schedule.steps + 1) % 6 != 0 or self.speed < 3 or i == 0 or i == 1:
+            if (self.model.schedule.steps + 1) % 6 != 0 or self.speed < 3 or i == 1 or i == 0:
                 self.model.add_agent(AgentTrace(self.model, old_pos, self))
                 self.trace.append(new_pos)
 
-        pos = new_pos if reached_new_pos else old_pos
-        self.model.grid.move_agent(self, pos)
-        # swapped position args since cells has the format (height, width)
-        self.model.cells[pos[1], pos[0]] = self.unique_id
+        # only move agent if new pos is in bounds
+        if reached_new_pos:
+            pos = new_pos
+            self.trace.append(new_pos)
+            self.model.grid.move_agent(self, pos)
+            # swapped position args since cells has the format (height, width)
+            self.model.cells[pos[1], pos[0]] = self.unique_id
 
     def valid_speed(self):
         return 1 <= self.speed <= 10
@@ -145,6 +156,7 @@ class AgentTrace(Agent):
     """
     Static trace element of an Agent that occupies one cell.
     """
+
     def __init__(self, model, pos, origin):
         """
         :param model: The model that the trace exists in.
@@ -160,6 +172,7 @@ class AgentTraceCollision(AgentTrace):
     """
     Static Agent to mark a Collision. Agent_id is always -1.
     """
+
     def __init__(self, model, pos):
         super().__init__(model, pos, None)
 
@@ -228,7 +241,7 @@ class ValidationAgent(SpeedAgent):
         :param id: Id of the current agent.
         :return:
         """
-        if self.model.schedule.steps+1 >= len(self.org_game):
+        if self.model.schedule.steps + 1 >= len(self.org_game):
             return None
         current_speed = self.org_game[self.model.schedule.steps]["players"][id]["speed"]
         next_speed = self.org_game[self.model.schedule.steps + 1]["players"][id]["speed"]
@@ -252,15 +265,18 @@ class ValidationAgent(SpeedAgent):
     def compare_with_org_game(self, state):
         org_cells = np.array(self.org_game[self.model.schedule.steps]["cells"], dtype="float64")
         current_cells = self.model.cells
-        if 'name' in self.org_game[self.model.schedule.steps]["players"]["1"].keys():
-            for key, value in self.org_game[self.model.schedule.steps]["players"].items():
-                self.org_game[self.model.schedule.steps]["players"][key].pop("name")
-            org_state = (self.org_game[self.model.schedule.steps]["players"])
-        else:
-            org_state = self.org_game[self.model.schedule.steps]['players']
+        org_state = (self.org_game[self.model.schedule.steps]["players"])
+        for key, value in org_state.items():
+            # remove "name" key in last step to match between org and sim states
+            if 'name' in value.keys():
+                org_state[key].pop("name")
 
+        if self.model.schedule.steps == 35:
+            print("A")
         if not (current_cells == org_cells).all():
             print(f"CELLS DO NOT MATCH in Step {self.model.schedule.steps}")
+            a = (current_cells == org_cells)
+            print(current_cells)
 
         if org_state != state['players']:
             print("__________")
@@ -271,9 +287,11 @@ class ValidationAgent(SpeedAgent):
 
     def act(self, state):
         # TODO: Compare with inactive agents, Is last step compared?
+        action = self.get_action(str(state["you"]))
         if state["you"] == self.checker_agent:
+
             # print(f"CHECK FOR STEP {self.model.schedule.steps}")
             self.compare_with_org_game(state)
             compare_grid_with_cells(self.model)
-        action = self.get_action(str(state["you"]))
+
         return action

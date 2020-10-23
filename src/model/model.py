@@ -45,14 +45,18 @@ class SpeedModel(Model):
                 agent_params["pos"] = self.random.choice(list(self.grid.empties))
             if "direction" not in agent_params:
                 agent_params["direction"] = self.random.choice(list(Direction))
-
             if agent_classes is None:
                 agent = RandomAgent(**agent_params)
             else:
                 agent = agent_classes[i](**agent_params)
-            self.add_agent(agent)
-            self.speed_agents.append(agent)
-            self.active_speed_agents.append(agent)
+            # don't add agent to grid/cells if its out of bounds. But add it to the scheduler.
+            if self.grid.out_of_bounds(agent_params["pos"]):
+                self.schedule.add(agent)
+                self.speed_agents.append(agent)
+            else:
+                self.add_agent(agent)
+                self.speed_agents.append(agent)
+                self.active_speed_agents.append(agent)
 
         if cells is not None:
             self.init_cells_and_grid(cells)
@@ -101,6 +105,8 @@ class SpeedModel(Model):
             for t in agent.trace:
                 cell_contents = self.grid.get_cell_list_contents(t)
                 if len(cell_contents) > 1:
+                    if self.schedule.steps == 36:
+                        print("a")
                     if agent not in agents_to_set_inactive:
                         agents_to_set_inactive.append(agent)
                     self.add_agent(AgentTraceCollision(self, t))

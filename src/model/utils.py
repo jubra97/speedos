@@ -74,10 +74,10 @@ def state_to_model(state, initialize_cells=False, agent_classes=None, additional
     for i, values in enumerate(state["players"].values()):
         initial_params.append({
             "pos": (values["x"], values["y"]),
-            "direction":  Direction[values["direction"].upper()],
+            "direction": Direction[values["direction"].upper()],
             "speed": values["speed"],
             "active": values["active"]
-            })
+        })
         if additional_params is not None:
             initial_params[i] = {**initial_params[i], **additional_params[i]}
 
@@ -86,7 +86,8 @@ def state_to_model(state, initialize_cells=False, agent_classes=None, additional
     from src.model.agents import AgentDummy
     if agent_classes is None:
         agent_classes = [AgentDummy for i in range(nb_agents)]
-    model = SpeedModel(width, height, nb_agents, state["cells"] if not initialize_cells else None, initial_params, agent_classes)
+    model = SpeedModel(width, height, nb_agents, state["cells"] if not initialize_cells else None, initial_params,
+                       agent_classes)
     return model
 
 
@@ -110,7 +111,7 @@ def compare_grid_with_cells(model):
             else:
                 grid_as_np_array[y, x] = agent.unique_id
         else:
-            if any(type(agent) is AgentTraceCollision for agent in entry) :
+            if any(type(agent) is AgentTraceCollision for agent in entry):
                 grid_as_np_array[y, x] = -1
             else:
                 print("DARF NICHT")

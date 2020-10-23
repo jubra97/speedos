@@ -4,6 +4,7 @@ import os
 from src.model.utils import state_to_model
 from src.model.agents import ValidationAgent
 
+
 def validate_with_original_game(path_to_game):
     with open(path_to_game, "r") as file:
         game = json.load(file)
@@ -32,6 +33,6 @@ def validate_with_original_game(path_to_game):
 
 original_games_path = os.path.abspath("..") + "/res/originalGames/"
 test_games = os.listdir(original_games_path)
-for game in reversed(test_games):
+for game in reversed(test_games[:-2]):
     print(f"Checking Game: {game}")
     validate_with_original_game(original_games_path + game)
