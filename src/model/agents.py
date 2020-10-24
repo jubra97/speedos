@@ -9,6 +9,7 @@ class SpeedAgent(Agent):
     """
     Abstract representation of an Agent in Speed.
     """
+
     def __init__(self, model, pos, direction, speed=1, active=True):
         """
         :param model: The model that the agent lives in.
@@ -24,7 +25,7 @@ class SpeedAgent(Agent):
         self.active = active
 
         self.action = None
-        self.trace = []     # Holds all cells that were visited in the last step
+        self.trace = []  # Holds all cells that were visited in the last step
         self.elimination_step = -1  # Saves the step that the agent was eliminated in (-1 if still active)
 
     @abstractmethod
@@ -71,6 +72,7 @@ class SpeedAgent(Agent):
         :return: None
         """
         if not self.valid_speed():
+            self.trace = []
             self.set_inactive()
             return
 
@@ -98,21 +100,29 @@ class SpeedAgent(Agent):
             new_pos = (new_x, new_y)
             # check borders and speed
             if self.model.grid.out_of_bounds(new_pos):
-                # remove agent and add the last trace
+                # add trace at last in front of bound if speed is slow
+                if (self.model.schedule.steps + 1) % 6 != 0 or i == 1 or i == 0:
+                    self.model.add_agent(AgentTrace(self.model, old_pos, self))
+                # remove agent from grid
+                self.model.grid.remove_agent(self)
+                # set pos for matching with original game
+                self.pos = (new_x, new_y)
                 self.set_inactive()
                 reached_new_pos = False
                 break
 
             # create trace
             # trace gaps occur every 6 rounds if the speed is higher than 2.
-            if (self.model.schedule.steps + 1) % 6 != 0 or self.speed < 3 or i == 0:
+            if (self.model.schedule.steps + 1) % 6 != 0 or self.speed < 3 or i == 1 or i == 0:
                 self.model.add_agent(AgentTrace(self.model, old_pos, self))
                 self.trace.append(new_pos)
 
-        pos = new_pos if reached_new_pos else old_pos
-        self.model.grid.move_agent(self, pos)
-        # swapped position args since cells has the format (height, width)
-        self.model.cells[pos[1], pos[0]] = self.unique_id
+        # only move agent if new pos is in bounds
+        pos = new_pos
+        if reached_new_pos:
+            self.model.grid.move_agent(self, pos)
+            # swapped position args since cells has the format (height, width)
+            self.model.cells[pos[1], pos[0]] = self.unique_id
 
     def valid_speed(self):
         return 1 <= self.speed <= 10
@@ -145,6 +155,7 @@ class AgentTrace(Agent):
     """
     Static trace element of an Agent that occupies one cell.
     """
+
     def __init__(self, model, pos, origin):
         """
         :param model: The model that the trace exists in.
@@ -154,6 +165,15 @@ class AgentTrace(Agent):
         super().__init__(model.next_id(), model)
         self.pos = pos
         self.origin = origin
+
+
+class AgentTraceCollision(AgentTrace):
+    """
+    Static Agent to mark a Collision. Agent_id is always -1.
+    """
+
+    def __init__(self, model, pos):
+        super().__init__(model, pos, None)
 
 
 class RandomAgent(SpeedAgent):
