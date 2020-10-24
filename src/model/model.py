@@ -138,7 +138,7 @@ class SpeedModel(Model):
         self.grid.place_agent(agent, agent.pos)
         # swapped position args since cells has the format (height, width)
         pos = (agent.pos[1], agent.pos[0])
-        if type(agent) is SpeedAgent:
+        if isinstance(agent, SpeedAgent):
             self.cells[pos] = agent.unique_id
         elif type(agent) is AgentTraceCollision:
             self.cells[pos] = -1
