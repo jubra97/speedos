@@ -86,9 +86,9 @@ class SpeedModel(Model):
         if self.data_collector:
             self.data_collector.collect(self)
 
+        self.schedule.step()  # changed order to match original game
         self.check_collisions()
         self.check_game_finished()
-        self.schedule.step()  # changed order to match original game
 
     def check_collisions(self):
         """
