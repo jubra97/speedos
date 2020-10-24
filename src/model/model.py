@@ -66,19 +66,14 @@ class SpeedModel(Model):
         # add traces to grid
         for y in range(self.cells.shape[0]):
             for x in range(self.cells.shape[1]):
-                # cell is not occupied
-                if self.cells[y, x] == 0:
-                    continue
                 # cell is occupied by a collision
-                elif self.cells[y, x] == -1:
+                if self.cells[y, x] == -1:
                     agent = AgentTraceCollision(self, (x, y))
                     self.add_agent(agent)
                 # cell is occupied by head or trace
-                else:
-                    # head of the agent is already a entry in self.grid
-                    if len(self.grid.get_cell_list_contents((x, y))) != 0:
-                        continue
-                    else:
+                elif self.cells[y, x] != 0:
+                    # head of the agent is not already a entry in self.grid
+                    if len(self.grid.get_cell_list_contents((x, y))) == 0:
                         # add trace
                         agent = AgentTrace(self, (x, y), self.speed_agents[self.cells[y, x]-1])  # get agent based on id
                         self.add_agent(agent)
