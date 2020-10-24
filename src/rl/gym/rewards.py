@@ -20,8 +20,8 @@ class LongSurvivalReward(Reward):
         if next_state["players"][str(agent_id)]["active"]:
             return 1
         else:
-            return 0
+            return -1
 
     @property
     def reward_range(self):
-        return 0, 1
+        return -1, 1

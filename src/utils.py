@@ -55,6 +55,9 @@ def get_state(model, agent):
 
 
 def arg_maxes(arr, indices=None):
+    if len(arr) == 0:
+        return []
+
     maxes = []
     maximum = max(arr)
     for idx, el in enumerate(arr):

@@ -3,7 +3,7 @@ import os
 import json
 from mesa import Model
 from src.model.agents import AgentDummy
-from src.model.utils import Direction, Action, state_to_model, get_state
+from src.utils import Direction, Action, state_to_model, get_state
 import numpy as np
 
 

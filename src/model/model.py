@@ -2,16 +2,16 @@ from mesa import Model
 from mesa.time import SimultaneousActivation
 from mesa.space import MultiGrid
 import numpy as np
-from src.model.agents import SpeedAgent, AgentTrace, RandomAgent, AgentTraceCollision
-from src.model.utils import Direction, compare_grid_with_cells
+from src.model.agents import SpeedAgent, AgentTrace, OneStepSurvivalAgent
+from src.utils import Direction
 
 
 class SpeedModel(Model):
     """
     Model of the game "Speed". This class controls the execution of the simulation.
     """
-    def __init__(self, width, height, nb_agents, cells=None, initial_agents_params=None, agent_classes=None, data_collector=None,
-                 verbose=False):
+    def __init__(self, width, height, nb_agents, cells=None, initial_agents_params=None, agent_classes=None,
+                 data_collector=None, verbose=False):
         """
         :param initial_agents_params: A list of dictionaries containing initialization parameters for agents
         that should be initialized at the start of the simulation
@@ -45,8 +45,9 @@ class SpeedModel(Model):
                 agent_params["pos"] = self.random.choice(list(self.grid.empties))
             if "direction" not in agent_params:
                 agent_params["direction"] = self.random.choice(list(Direction))
+
             if agent_classes is None:
-                agent = RandomAgent(**agent_params)
+                agent = OneStepSurvivalAgent(**agent_params)
             else:
                 agent = agent_classes[i](**agent_params)
             # don't add agent to grid/cells if its out of bounds. But add it to the scheduler.
@@ -85,8 +86,7 @@ class SpeedModel(Model):
         """
         if self.data_collector:
             self.data_collector.collect(self)
-
-        self.schedule.step()  # changed order to match original game
+        self.schedule.step()
         self.check_collisions()
         self.check_game_finished()
 
@@ -138,11 +138,11 @@ class SpeedModel(Model):
         self.grid.place_agent(agent, agent.pos)
         # swapped position args since cells has the format (height, width)
         pos = (agent.pos[1], agent.pos[0])
-        if isinstance(agent, SpeedAgent):
+        if type(agent) is SpeedAgent:
             self.cells[pos] = agent.unique_id
-        elif isinstance(agent, AgentTraceCollision):
+        elif type(agent) is AgentTraceCollision:
             self.cells[pos] = -1
-        elif isinstance(agent, AgentTrace):
+        elif type(agent) is AgentTrace:
             self.cells[pos] = agent.origin.unique_id
 
     def remove_agent(self, agent):

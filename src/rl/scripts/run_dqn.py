@@ -2,7 +2,7 @@ from stable_baselines import DQN
 from src.rl.gym.environments import SingleAgentSpeedEnv
 
 env = SingleAgentSpeedEnv()
-model = DQN.load("../../res/rl/models/dqn_test")
+model = DQN.load("../../../res/rl/models/dqn_test")
 
 obs = env.reset()
 done = False
