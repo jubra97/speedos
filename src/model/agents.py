@@ -72,6 +72,7 @@ class SpeedAgent(Agent):
         :return: None
         """
         if not self.valid_speed():
+            self.trace = []
             self.set_inactive()
             return
 
@@ -102,7 +103,6 @@ class SpeedAgent(Agent):
                 # add trace at last in front of bound if speed is slow
                 if (self.model.schedule.steps + 1) % 6 != 0 or i == 1 or i == 0:
                     self.model.add_agent(AgentTrace(self.model, old_pos, self))
-                    self.trace.append(old_pos)
                 # remove agent from grid
                 self.model.grid.remove_agent(self)
                 # set pos for matching with original game
@@ -118,9 +118,8 @@ class SpeedAgent(Agent):
                 self.trace.append(new_pos)
 
         # only move agent if new pos is in bounds
+        pos = new_pos
         if reached_new_pos:
-            pos = new_pos
-            self.trace.append(new_pos)
             self.model.grid.move_agent(self, pos)
             # swapped position args since cells has the format (height, width)
             self.model.cells[pos[1], pos[0]] = self.unique_id
@@ -271,12 +270,8 @@ class ValidationAgent(SpeedAgent):
             if 'name' in value.keys():
                 org_state[key].pop("name")
 
-        if self.model.schedule.steps == 35:
-            print("A")
         if not (current_cells == org_cells).all():
             print(f"CELLS DO NOT MATCH in Step {self.model.schedule.steps}")
-            a = (current_cells == org_cells)
-            print(current_cells)
 
         if org_state != state['players']:
             print("__________")

@@ -11,7 +11,7 @@ class SpeedModel(Model):
     Model of the game "Speed". This class controls the execution of the simulation.
     """
     def __init__(self, width, height, nb_agents, cells=None, initial_agents_params=None, agent_classes=None, data_collector=None,
-                 verbose=True):
+                 verbose=False):
         """
         :param initial_agents_params: A list of dictionaries containing initialization parameters for agents
         that should be initialized at the start of the simulation
@@ -101,12 +101,10 @@ class SpeedModel(Model):
         :return: None
         """
         agents_to_set_inactive = []
-        for agent in self.active_speed_agents:
+        for agent in self.speed_agents:
             for t in agent.trace:
                 cell_contents = self.grid.get_cell_list_contents(t)
                 if len(cell_contents) > 1:
-                    if self.schedule.steps == 36:
-                        print("a")
                     if agent not in agents_to_set_inactive:
                         agents_to_set_inactive.append(agent)
                     self.add_agent(AgentTraceCollision(self, t))
