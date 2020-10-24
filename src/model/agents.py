@@ -199,6 +199,22 @@ class OneStepSurvivalAgent(SpeedAgent):
 
     def act(self, state):
         own_id = state["you"]
+        own_props = state["players"][str(own_id)]
+        possible_actions = list(Action)
+        if own_props["speed"] == 1:
+            possible_actions.remove(Action.SLOW_DOWN)
+        elif own_props["speed"] == 10:
+            possible_actions.remove(Action.SPEED_UP)
+        return self.random.choice(possible_actions)
+
+
+class OneStepSurvivalAgent(SpeedAgent):
+    """
+    Agent that chooses random actions.
+    """
+
+    def act(self, state):
+        own_id = state["you"]
         survival = dict.fromkeys(list(Action), 0)
         model = state_to_model(state)
 
