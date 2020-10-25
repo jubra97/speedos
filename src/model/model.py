@@ -83,7 +83,7 @@ class SpeedModel(Model):
         Checks whether or not the game has finished (every agent is eliminated) and prints the result if finished.
         :return: None
         """
-        if len(self.active_speed_agents) == 0:
+        if len(self.active_speed_agents) <= 1:
             self.running = False
             if self.verbose:
                 self.print_standings()

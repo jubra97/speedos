@@ -125,7 +125,7 @@ class SpeedAgent(Agent):
         self.active = False
         if self in self.model.active_speed_agents:
             self.model.active_speed_agents.remove(self)
-        self.elimination_step = self.model.schedule.steps + 1
+        self.elimination_step = self.model.schedule.steps
 
 
 class AgentDummy(SpeedAgent):
