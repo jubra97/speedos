@@ -1,4 +1,3 @@
-from src.utils import Action
 
 
 def multi_minimax(max_player, min_players, depth, game_state):
@@ -46,9 +45,5 @@ def minimax(max_player, min_player, depth, alpha, beta, is_max, game_state):
             if alpha >= beta:
                 break
         return min_move
-
-
-def evaluate_position(model, agent):
-    return 1 if agent.active else -1
 
 
