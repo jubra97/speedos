@@ -85,3 +85,10 @@ def state_to_model(state):
     from src.model.agents import AgentDummy
     model = SpeedModel(width, height, nb_agents, initial_params, [AgentDummy for i in range(nb_agents)])
     return model
+
+
+def evaluate_position(model, agent):
+    if not agent.active:
+        return -1
+    else:
+        return 1
