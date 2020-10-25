@@ -3,6 +3,7 @@ from abc import abstractmethod
 from itertools import permutations
 from src.utils import Direction, Action, get_state, arg_maxes, state_to_model, evaluate_position
 import numpy as np
+from src.heuristics import heuristics
 
 
 class SpeedAgent(Agent):
@@ -216,4 +217,16 @@ class NStepSurvivalAgent(SpeedAgent):
             model = state_to_model(state)
 
         return np.random.choice(arg_maxes(survival.values(), list(survival.keys())))
+
+
+class MultiMiniMaxAgent(SpeedAgent):
+    """
+    Agent chooses an action based on the multi-minimax algorithm
+    """
+    def act(self, state, depth):
+        own_id = state["you"]
+        model = state_to_model(state)
+        own_agent = model.get_agent_by_id(own_id)
+        opponents = model.active_speed_agents.remove(own_agent)
+        return heuristics.multi_minimax(own_agent, opponents, depth, model)
 
