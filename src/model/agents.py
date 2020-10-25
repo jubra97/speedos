@@ -1,7 +1,7 @@
 from mesa import Agent
 from abc import abstractmethod
 from itertools import permutations
-from src.utils import Direction, Action, get_state, arg_maxes, state_to_model
+from src.utils import Direction, Action, get_state, arg_maxes, state_to_model, evaluate_position
 import numpy as np
 
 
@@ -209,8 +209,7 @@ class OneStepSurvivalAgent(SpeedAgent):
                 agent.action = action_permutation[idx]
 
             model.step()
-            if own_agent.active:
-                survival[own_agent.action] += 1
+            survival[own_agent.action] += evaluate_position(model, own_agent)
             model = state_to_model(state)
 
         return np.random.choice(arg_maxes(survival.values(), list(survival.keys())))
@@ -233,8 +232,7 @@ class NStepSurvivalAgent(SpeedAgent):
                 for idx, agent in enumerate(model.active_speed_agents):
                     agent.action = action_permutation[idx+s]
                 model.step()
-            if own_agent.active:
-                survival[own_agent.action] += 1
+            survival[own_agent.action] += evaluate_position(model, own_agent)
             model = state_to_model(state)
 
         return np.random.choice(arg_maxes(survival.values(), list(survival.keys())))
