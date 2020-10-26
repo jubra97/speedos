@@ -36,6 +36,9 @@ class TestModelValidity(unittest.TestCase):
 
                 for agent in model.speed_agents:
                     agent.action = self.get_action(game, model, str(agent.unique_id))
+                    if agent.action == "set_inactive" and agent.active:
+                        print("Set inactive")
+                        agent.set_inactive()
                 model.step()
 
     def compare_states(self, org_game, model, state):
@@ -93,6 +96,10 @@ class TestModelValidity(unittest.TestCase):
             org_game[model.schedule.steps]["players"][agent_id]["direction"].upper()].value
         next_direction = Direction[
             org_game[model.schedule.steps + 1]["players"][agent_id]["direction"].upper()].value
+        if org_game[model.schedule.steps]["players"][agent_id]["x"] == org_game[model.schedule.steps + 1]["players"][agent_id]["x"] and \
+            org_game[model.schedule.steps]["players"][agent_id]["y"] == org_game[model.schedule.steps + 1]["players"][agent_id]["y"] and \
+                org_game[model.schedule.steps]["players"][agent_id]["speed"] == org_game[model.schedule.steps + 1]["players"][agent_id]["speed"]:
+            return "set_inactive"
         if current_speed - next_speed == -1:
             return Action.SPEED_UP
         elif current_speed - next_speed == 1:
@@ -112,6 +119,12 @@ class TestModelValidity(unittest.TestCase):
             if game[-1]["players"][str(i)]["active"]:
                 compare_agent = str(i)
                 break
+        # if tie get a player that was active the step before
+        if compare_agent == -1:
+            for i in range(1, len(game[-2]["players"]) + 1):
+                if game[-2]["players"][str(i)]["active"]:
+                    compare_agent = str(i)
+                    break
         rounds_to_remove = []
         for i in range(len(game) - 2):
             if game[i]["players"][compare_agent]["x"] == game[i + 1]["players"][compare_agent]["x"] and \
