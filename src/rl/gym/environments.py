@@ -45,13 +45,14 @@ class SingleAgentSpeedEnv(Env):
         self.agent.action = Action(action)
         self.model.step()
 
-        new_state = get_state(self.model, self.agent)
+        next_state = get_state(self.model, self.agent)
         done = not self.agent.active
-        reward = self.reward.payout(self.state, action, new_state, done, new_state["you"])
+        reward = self.reward.payout(self.state, action, next_state, done, next_state["you"])
         info = {}
-        self.state = new_state
+        self.state = next_state
 
-        return self.observer.prepared_state(self.state, self.model.schedule.steps), reward, done, info
+        return (self.observer.prepared_state(self.state, self.agent.unique_id, self.model.schedule.steps),
+                reward, done, info)
 
     def render(self, mode='ansi'):
         if mode == 'ansi':
@@ -85,12 +86,20 @@ class HeuristicsSpeedEnv(SingleAgentSpeedEnv):
         self.agent = self.model.speed_agents[0]
         self.state = get_state(self.model, self.agent)
 
-        return self.observer.prepared_state(self.state, self.model.schedule.steps)
+        return self.observer.prepared_state(self.state, self.agent.unique_id, self.model.schedule.steps)
 
     def step(self, action):
-        next_state, reward, done, info = super(HeuristicsSpeedEnv, self).step(action)
-        done = not self.model.running
-        return next_state, reward, done, info
+        self.agent.action = Action(action)
+        self.model.step()
+
+        next_state = get_state(self.model, self.agent)
+        done = not self.state["players"][str(self.state["you"])]["active"] or not self.model.running
+        reward = self.reward.payout(self.state, action, next_state, done, next_state["you"])
+        info = {}
+        self.state = next_state
+
+        return (self.observer.prepared_state(self.state, self.agent.unique_id, self.model.schedule.steps),
+                reward, done, info)
 
 
 class SelfPlaySpeedEnv(SingleAgentSpeedEnv):
@@ -123,14 +132,14 @@ class SelfPlaySpeedEnv(SingleAgentSpeedEnv):
         self.model.step()
 
         transitions = list()
-        done = not self.model.running
         for i in range(self.nb_agents):
-            new_state = get_state(self.model, self.agent[i])
-            reward = self.reward.payout(self.state[i], actions[i], new_state, done, new_state["you"])
+            next_state = get_state(self.model, self.agent[i])
+            done = not next_state["players"][str(next_state["you"])]["active"] or not self.model.running
+            reward = self.reward.payout(self.state[i], actions[i], next_state, done, next_state["you"])
             # agents that have already been eliminated before this step should not be used for learning anymore
-            info = {"skip": not self.agent[i].active and self.agent[i].elimination_step == self.model.schedule.steps}
+            info = {"skip": done and 0 <= self.agent[i].elimination_step < self.model.schedule.steps}
 
-            self.state[i] = new_state
+            self.state[i] = next_state
             transitions.append((
                 self.observer.prepared_state(self.state[i], self.state[i]["you"], self.model.schedule.steps),
                 reward,

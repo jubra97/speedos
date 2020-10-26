@@ -140,7 +140,8 @@ class SelfPlayDQN(DQN):
                                                             self.num_timesteps)
 
                     episode_rewards[-1] += rew
-                    if done:
+                    # reset when all dones are true
+                    if all([ret[2] for ret in step_returns]):
                         maybe_is_success = info.get('is_success')
                         if maybe_is_success is not None:
                             episode_successes.append(float(maybe_is_success))

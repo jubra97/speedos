@@ -74,6 +74,7 @@ class SpeedAgent(Agent):
         if not self.valid_speed():
             self.trace = []
             self.set_inactive()
+            self.elimination_step += 1
             return
 
         # empty the trace
@@ -108,6 +109,7 @@ class SpeedAgent(Agent):
                 # set pos for matching with original game
                 self.pos = (new_x, new_y)
                 self.set_inactive()
+                self.elimination_step += 1
                 reached_new_pos = False
                 break
 
@@ -231,4 +233,3 @@ class OneStepSurvivalAgent(SpeedAgent):
             model = state_to_model(state)
 
         return np.random.choice(arg_maxes(survival.values(), list(survival.keys())))
-
