@@ -2,7 +2,7 @@ from mesa import Model
 from mesa.time import SimultaneousActivation
 from mesa.space import MultiGrid
 import numpy as np
-from src.model.agents import SpeedAgent, AgentTrace, OneStepSurvivalAgent, AgentTraceCollision
+from src.model.agents import SpeedAgent, AgentTrace, OneStepSurvivalAgent, AgentTraceCollision, MultiMiniMaxAgent
 from src.utils import Direction
 
 
@@ -47,7 +47,7 @@ class SpeedModel(Model):
                 agent_params["direction"] = self.random.choice(list(Direction))
 
             if agent_classes is None:
-                agent = OneStepSurvivalAgent(**agent_params)
+                agent = MultiMiniMaxAgent(**agent_params)
             else:
                 agent = agent_classes[i](**agent_params)
             # don't add agent to grid/cells if its out of bounds. But add it to the scheduler.
@@ -87,6 +87,16 @@ class SpeedModel(Model):
         if self.data_collector:
             self.data_collector.collect(self)
         self.schedule.step()
+        self.check_collisions()
+        self.check_game_finished()
+
+    def step_specific_agent(self, agent):
+        """
+        Computes one iteration of the model.
+        :return: None
+        """
+        agent.step()
+        agent.advance()
         self.check_collisions()
         self.check_game_finished()
 
