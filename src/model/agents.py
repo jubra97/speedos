@@ -121,6 +121,7 @@ class SpeedAgent(Agent):
         pos = new_pos
         if reached_new_pos:
             self.model.grid.move_agent(self, pos)
+            self.trace.append(pos)
             # swapped position args since cells has the format (height, width)
             self.model.cells[pos[1], pos[0]] = self.unique_id
 
@@ -231,4 +232,3 @@ class OneStepSurvivalAgent(SpeedAgent):
             model = state_to_model(state)
 
         return np.random.choice(arg_maxes(survival.values(), list(survival.keys())))
-
