@@ -28,9 +28,8 @@ class SpeedAgent(Agent):
         self.trace = []  # Holds all cells that were visited in the last step
         self.elimination_step = -1  # Saves the step that the agent was eliminated in (-1 if still active)
 
-    @staticmethod
     @abstractmethod
-    def act(state):
+    def act(self, state):
         """
         Chooses an action - should be overwritten by an agent implementation.
         :return: Action
@@ -182,8 +181,8 @@ class RandomAgent(SpeedAgent):
     """
     Agent that chooses random actions.
     """
-    @staticmethod
-    def act(state):
+
+    def act(self, state):
         own_id = state["you"]
         own_props = state["players"][str(own_id)]
         possible_actions = list(Action)
@@ -191,7 +190,7 @@ class RandomAgent(SpeedAgent):
             possible_actions.remove(Action.SLOW_DOWN)
         elif own_props["speed"] == 10:
             possible_actions.remove(Action.SPEED_UP)
-        return np.random.choice(possible_actions)
+        return self.random.choice(possible_actions)
 
 
 class OneStepSurvivalAgent(SpeedAgent):
@@ -233,4 +232,3 @@ class OneStepSurvivalAgent(SpeedAgent):
             model = state_to_model(state)
 
         return np.random.choice(arg_maxes(survival.values(), list(survival.keys())))
-
