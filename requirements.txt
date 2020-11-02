@@ -4,3 +4,4 @@ asyncio~=3.4.3
 numpy~=1.19.1
 stable-baselines~=2.10.1
 tensorflow~=1.15.0
+websockets~=8.1
