@@ -89,7 +89,31 @@ def minimax(max_player, min_player, depth, alpha, beta, is_max, model):
 
 
 def evaluate_position(model, agent):
-    return 1 if agent.active else -1
+    if not agent.active:
+        return -1
+    else:
+        return 1
+    """all_values = 0
+    counter = 0
+    distance = 5
+    agent_pos = agent.pos
+    x_start = agent_pos[0] - distance
+    y_start = agent_pos[1] - distance
+    x_end = agent_pos[0] + distance
+    y_end = agent_pos[1] + distance
+    for x in range(x_start, x_end):
+        for y in range(y_start, y_end):
+            try:
+                if model.cells[x][y] == 0:
+                    pass
+                else:
+                    all_values += 1
+            except IndexError:
+                all_values += 1
+            counter += 1
+    density = all_values / counter
+    return 1 - density"""
+
 
 
 """

@@ -243,7 +243,7 @@ class MultiMiniMaxAgent(SpeedAgent):
     """
     Agent that chooses an action based on the multi minimax algorithm
     """
-    def act(self, state, depth=4):
+    def act(self, state, depth=3):
         model = state_to_model(state)
         own_id = state["you"]
         own_agent = model.get_agent_by_id(own_id)
