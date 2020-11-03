@@ -1,4 +1,5 @@
 from enum import Enum
+import json
 
 
 class Direction(Enum):
@@ -90,3 +91,35 @@ def state_to_model(state, initialize_cells=False, agent_classes=None, additional
     model = SpeedModel(width, height, nb_agents, state["cells"] if not initialize_cells else None, initial_params,
                        agent_classes)
     return model
+
+
+def json_to_history(path_to_json, output_path, horizontal=False):
+    """
+    Copy the output of this function to the excel sheet misc/Speed_History.xlsx
+    to get conditional formatting.
+    :param path_to_json:
+    :param output_path: should end on .tsv or .txt
+    :param horizontal: vertical or horizintal data format for output
+    :return:
+    """
+    with open(path_to_json, encoding="utf-8") as f:
+        data = json.load(f)
+
+    outfile = open(output_path, "w+", encoding="utf-8")
+
+    if horizontal:
+        for i in range(0, data[0]["height"]):
+            for r in range(0, len(data)):
+                row = data[r]["cells"][i]
+                outfile.write("\t".join((map(lambda x: str(x), row))))
+                outfile.write("\t-\t")
+            outfile.write("\n")
+    else:
+        for round in data:
+            outrows = []
+            for row in round["cells"]:
+                outrows.append("\t".join(map(lambda x: str(x), row)))
+            outfile.write("\n".join(outrows))
+            outfile.write("\n-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\n")
+
+    outfile.close()
