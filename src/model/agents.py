@@ -210,10 +210,13 @@ class OneStepSurvivalAgent(SpeedAgent):
                 agent.action = action_permutation[idx]
 
             model.step()
-            survival[own_agent.action] += heuristics.evaluate_position(model, own_agent)
+            survival[own_agent.action] += heuristics.evaluate_position(model, own_agent, 1)
             model = state_to_model(state)
 
-        return np.random.choice(arg_maxes(survival.values(), list(survival.keys())))
+        amaxes = arg_maxes(survival.values(), list(survival.keys()))
+        if len(amaxes) == 0:
+            amaxes = list(Action)
+        return np.random.choice(amaxes)
 
 
 class NStepSurvivalAgent(SpeedAgent):
@@ -243,12 +246,8 @@ class MultiMiniMaxAgent(SpeedAgent):
     """
     Agent that chooses an action based on the multi minimax algorithm
     """
-    def act(self, state, depth=4):
-        model = state_to_model(state)
-        own_id = state["you"]
-        own_agent = model.get_agent_by_id(own_id)
-        other_agents = model.active_speed_agents
-        other_agents.remove(own_agent)
-        return heuristics.multi_minimax(depth, state)
+    def act(self, state, depth=5):  # TODO: Pass depth as an __init__-arg
+        action = heuristics.multi_minimax(depth, state)
+        return action
 
 

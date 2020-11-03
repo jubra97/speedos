@@ -1,4 +1,5 @@
 from enum import Enum
+import numpy as np
 
 
 class Direction(Enum):
@@ -41,7 +42,7 @@ def model_to_json(model):
     return {
         "width": model.width,
         "height": model.height,
-        "cells": model.cells,
+        "cells": model.cells.copy(),
         "players": players,
         "running": model.running
     }

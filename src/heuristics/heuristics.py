@@ -6,29 +6,24 @@ def multi_minimax(depth, game_state):
     model = state_to_model(game_state)
     own_id = game_state["you"]
     max_player = model.get_agent_by_id(own_id)
-    min_players = model.active_speed_agents
-    if max_player in min_players:
-        min_players.remove(max_player)
+    min_player_ids = list(map(lambda a: a.unique_id, model.active_speed_agents))
+    min_player_ids.remove(own_id)
 
     move_to_make = Action.CHANGE_NOTHING
     max_move = float("-inf")
     alpha = float("-inf")
-    pre_state = model_to_json(model)
     for action in list(Action):
+        pre_state = model_to_json(model)
         update_game_state(model, max_player, action)
         min_move = float("inf")
         beta = float("inf")
-        for opponent in min_players:
+        for opponent_id in min_player_ids:
+            opponent = model.get_agent_by_id(opponent_id)
 
             min_move = min(min_move, minimax(max_player, opponent, depth-1, alpha, beta, False, model))
 
             model = state_to_model(pre_state)
-            own_id = max_player.unique_id
             max_player = model.get_agent_by_id(own_id)
-            max_player.action = action
-            min_players = model.active_speed_agents
-            if max_player in min_players:
-                min_players.remove(max_player)
 
             if alpha >= beta:
                 break
@@ -37,6 +32,7 @@ def multi_minimax(depth, game_state):
                 move_to_make = np.random.choice([move_to_make, action])
             else:
                 move_to_make = action
+
             max_move = min_move
             alpha = max_move
     return move_to_make
@@ -48,8 +44,9 @@ def update_game_state(model, agent, action):
 
 
 def minimax(max_player, min_player, depth, alpha, beta, is_max, model):
-    if depth == 0:
-        return evaluate_position(model, max_player)
+    # TODO: Check if there is no legal (non-loosing) move instead of checking whether the game is already lost/over
+    if depth == 0 or not max_player.active or not model.running:
+        return evaluate_position(model, max_player, depth)
     if is_max:
         max_move = float("-inf")
         pre_state = model_to_json(model)
@@ -88,8 +85,8 @@ def minimax(max_player, min_player, depth, alpha, beta, is_max, model):
         return min_move
 
 
-def evaluate_position(model, agent):
-    return 1 if agent.active else -1
+def evaluate_position(model, agent, depth):
+    return 1 if agent.active else -1 * depth
 
 
 """
