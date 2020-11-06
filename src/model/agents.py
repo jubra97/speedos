@@ -224,7 +224,11 @@ class NStepSurvivalAgent(SpeedAgent):
     """
     Agent that calculates the next steps and chooses an action where he survives.
     """
-    def act(self, state, n):
+    def __init__(self, model, pos, direction, speed=1, active=True, depth=4):
+        super().__init__(model, pos, direction, speed, active)
+        self.depth = depth
+
+    def act(self, state):
         own_id = state["you"]
         survival = dict.fromkeys(list(Action), 0)
         model = state_to_model(state)
@@ -232,7 +236,7 @@ class NStepSurvivalAgent(SpeedAgent):
         nb_active_agents = len(model.active_speed_agents)
         action_permutations = list(permutations(list(Action), nb_active_agents * n))
         for action_permutation in action_permutations:
-            for s in range(n):
+            for s in range(self.depth):
                 own_agent = model.get_agent_by_id(own_id)
                 for idx, agent in enumerate(model.active_speed_agents):
                     agent.action = action_permutation[idx+s]
@@ -247,9 +251,13 @@ class MultiMiniMaxAgent(SpeedAgent):
     """
     Agent that chooses an action based on the multi minimax algorithm
     """
-    def act(self, state, depth=4):  # TODO: Pass depth as an __init__-arg
-                                    # TODO: depth could be a dynamic parameter (dependent on currently living players)
-        action = heuristics.multi_minimax(depth, state)
+    def __init__(self, model, pos, direction, speed=1, active=True, depth=4):
+        super().__init__(model, pos, direction, speed, active)
+        self.depth = depth
+
+    def act(self, state):  # TODO: Pass depth as an __init__-arg
+        # TODO: depth could be a dynamic parameter (dependent on currently living players)
+        action = heuristics.multi_minimax(self.depth, state)
         return action
 
 

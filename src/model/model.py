@@ -92,7 +92,8 @@ class SpeedModel(Model):
 
     def step_specific_agent(self, agent):
         """
-        Computes one iteration of the model.
+        Only steps one specific agent. This is only for specific applications (e.g. Multi-Minimax).
+        Don't use this method if not necessary since it doesn't increment all model parts (e.g. time).
         :return: None
         """
         agent.step()
@@ -140,7 +141,7 @@ class SpeedModel(Model):
             print('Winning Agent: ' + str(self.active_speed_agents[0].unique_id))
         else:
             print('Draw')
-        # print("Standings after {} rounds:\n".format(self.schedule.steps), result)
+        print("Standings after {} rounds:\n".format(self.schedule.steps), result)
 
     def add_agent(self, agent):
         """
