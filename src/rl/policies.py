@@ -3,8 +3,8 @@ import numpy as np
 from stable_baselines.common.tf_layers import conv, linear, conv_to_fc
 
 
-# Todo: This is hardcoded, idk how to make it variable though
-nb_scalar_features = 11
+# This is hardcoded, idk how to make it variable though
+nb_scalar_features = 16
 
 
 def nature_cnn_mlp_mix(scaled_images, **kwargs):
@@ -25,6 +25,12 @@ def nature_cnn_mlp_mix(scaled_images, **kwargs):
 
     # mlp
     mlp_1 = activ(linear(other_features, 'mlp1', n_hidden=32))
-    mlp_2 = activ(linear(mlp_1, 'mlp2', n_hidden=32))
+    # mlp_2 = activ(linear(mlp_1, 'mlp2', n_hidden=32))
+    # return tf.concat((img_output, mlp_2), axis=1)
 
-    return tf.concat((img_output, mlp_2), axis=1)
+    # bring cnn together and have some combined layers
+    concat = tf.concat((img_output, mlp_1), axis=1)
+    combined_1 = activ(linear(concat, 'combined1', n_hidden=64))
+    combined_2 = activ(linear(concat, 'combined2', n_hidden=32))
+
+    return combined_2

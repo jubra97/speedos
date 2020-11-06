@@ -112,9 +112,6 @@ class GlobalMixedImageObserver:
         r, g = pixels[0, img_id_counter]
         pixels[0, img_id_counter] = (r, int((step_counter % 6) / 5 * 255))
 
-        #img = Image.fromarray(pixels, 'RGB')
-        #img.show()
-
         return pixels
 
 
@@ -124,9 +121,9 @@ class GlobalImageObserver:
         self.nb_agents = nb_agents
         self.width = width
         self.height = height
-        lows = np.zeros((height, width, 3))
-        highs = np.full((height, width, 3), 255)
-        self.observation_space = spaces.Box(low=lows, high=highs, shape=(height, width, 3), dtype='uint8')
+        lows = np.zeros((height, width, 4))
+        highs = np.full((height, width, 4), 255)
+        self.observation_space = spaces.Box(low=lows, high=highs, shape=(height, width, 4), dtype='uint8')
 
     def prepared_state(self, state, agent_id, step_counter):
         # format: [R, G, B, A] image with R=Obstacles, G=Opponents, B=Self, A=Round_Counter
@@ -135,7 +132,7 @@ class GlobalImageObserver:
         width = state["width"]
         height = state["height"]
 
-        cells = np.zeros((height, width, 3), dtype='uint8')
+        cells = np.zeros((height, width, 4), dtype='uint8')
         for x in range(width):
             for y in range(height):
                 # set every cell to 0 (empty) or 1 (occupied)
@@ -146,7 +143,7 @@ class GlobalImageObserver:
                     cells[y, x, 0] = 255
 
                 # put the 6 round counter on the 4th layer
-                #cells[y, x, 3] = 255 #int((step_counter % 6) / 5 * 255)
+                cells[y, x, 3] = int((step_counter % 6) / 5 * 255)
 
         # player information is put into layers 2 and 3 (g, b)
         other_player_ids = list(state["players"].keys())
@@ -158,9 +155,6 @@ class GlobalImageObserver:
         self.add_player_to_layer(cells, 2, state["players"][str(agent_id)])
 
         pixels = cv2.resize(cells, dsize=(self.height, self.width), interpolation=cv2.INTER_NEAREST)
-
-        # img = Image.fromarray(pixels, 'RGB')
-        # img.show()
         return pixels
 
     @staticmethod

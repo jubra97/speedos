@@ -5,7 +5,7 @@ from src.model.agents import RandomAgent, AgentDummy, OneStepSurvivalAgent
 from src.rl.policies import nature_cnn_mlp_mix
 
 
-policy_kwargs = dict() #dict(cnn_extractor=nature_cnn_mlp_mix)
+policy_kwargs = dict(cnn_extractor=nature_cnn_mlp_mix)
 env = HeuristicsSpeedEnv(width=16, height=16, observer=GlobalImageObserver(nb_agents=2, width=64, height=64),
                          agent_classes=[AgentDummy, OneStepSurvivalAgent])
 env.model.verbose = True
