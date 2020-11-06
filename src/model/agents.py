@@ -210,7 +210,8 @@ class OneStepSurvivalAgent(SpeedAgent):
                 agent.action = action_permutation[idx]
 
             model.step()
-            survival[own_agent.action] += heuristics.evaluate_position(model, own_agent, 1)
+            if own_agent.active:
+                survival[own_agent.action] += 1
             model = state_to_model(state)
 
         amaxes = arg_maxes(survival.values(), list(survival.keys()))
@@ -246,7 +247,8 @@ class MultiMiniMaxAgent(SpeedAgent):
     """
     Agent that chooses an action based on the multi minimax algorithm
     """
-    def act(self, state, depth=5):  # TODO: Pass depth as an __init__-arg
+    def act(self, state, depth=4):  # TODO: Pass depth as an __init__-arg
+                                    # TODO: depth could be a dynamic parameter (dependent on currently living players)
         action = heuristics.multi_minimax(depth, state)
         return action
 

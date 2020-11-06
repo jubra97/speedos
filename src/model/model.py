@@ -136,7 +136,11 @@ class SpeedModel(Model):
             lambda agent: {"ID: ": agent.unique_id, "Survived Steps: ": agent.elimination_step},
             self.speed_agents
         ))
-        print("Standings after {} rounds:\n".format(self.schedule.steps), result)
+        if len(self.active_speed_agents) == 1:
+            print('Winning Agent: ' + str(self.active_speed_agents[0].unique_id))
+        else:
+            print('Draw')
+        # print("Standings after {} rounds:\n".format(self.schedule.steps), result)
 
     def add_agent(self, agent):
         """

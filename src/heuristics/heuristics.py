@@ -13,6 +13,9 @@ def multi_minimax(depth, game_state):
     max_move = float("-inf")
     alpha = float("-inf")
     for action in list(Action):
+        # Can be activated for better results (at current state)
+        """if action == Action.SPEED_UP and max_player.speed == 3:
+            break"""
         pre_state = model_to_json(model)
         update_game_state(model, max_player, action)
         min_move = float("inf")
@@ -43,9 +46,8 @@ def update_game_state(model, agent, action):
 
 
 def minimax(max_player, min_player, depth, alpha, beta, is_max, model):
-    # TODO: Check if there is no legal (non-loosing) move instead of checking whether the game is already lost/over
-    if depth == 0 or not max_player.active or not model.running:
-        return evaluate_position(model, max_player, depth)
+    if depth == 0 or not check_legal_move_left(max_player, model) or not model.running:
+        return evaluate_position(model, max_player, min_player, depth)
     if is_max:
         max_move = float("-inf")
         pre_state = model_to_json(model)
@@ -84,8 +86,20 @@ def minimax(max_player, min_player, depth, alpha, beta, is_max, model):
         return min_move
 
 
-def evaluate_position(model, agent, depth):
-    return 1 if agent.active else -1 * depth
+def check_legal_move_left(agent, model):
+    pre_state = model_to_json(model)
+    for action in list(Action):
+        model = state_to_model(pre_state)
+        update_game_state(model, agent, action)
+        if agent.active:
+            return True
+
+
+def evaluate_position(model, max_player, min_player, depth):
+    if check_legal_move_left(max_player, model) and not check_legal_move_left(min_player, model):
+        return float("inf")
+    else:
+        return -1 * depth
     """all_values = 0
     counter = 0
     distance = 5
@@ -152,6 +166,4 @@ def multi_minimax(max_player, min_players, depth, game_state):
             alpha = max_move
     return move_to_make
 """
-
-
 
