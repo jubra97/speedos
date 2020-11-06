@@ -4,6 +4,7 @@ from abc import abstractmethod
 from itertools import permutations
 from src.utils import Direction, Action, get_state, arg_maxes, state_to_model
 import numpy as np
+from pynput import keyboard
 
 
 class SpeedAgent(Agent):
@@ -238,3 +239,22 @@ class OneStepSurvivalAgent(SpeedAgent):
             model = state_to_model(state)
 
         return np.random.choice(arg_maxes(survival.values(), list(survival.keys())))
+
+
+class HumanAgent(SpeedAgent):
+
+    def act(self, state):
+        with keyboard.Events() as events:
+            # Block for as much as possible
+            input_key = events.get(1000000).key
+
+        if input_key == keyboard.KeyCode.from_char('w'):
+            return Action.SPEED_UP
+        elif input_key == keyboard.KeyCode.from_char('s'):
+            return Action.SLOW_DOWN
+        elif input_key == keyboard.KeyCode.from_char('a'):
+            return Action.TURN_LEFT
+        elif input_key == keyboard.KeyCode.from_char('d'):
+            return Action.TURN_RIGHT
+        else:
+            return Action.CHANGE_NOTHING
