@@ -1,4 +1,5 @@
 from mesa import Agent
+from mesa import Model
 from abc import abstractmethod
 from itertools import permutations
 from src.utils import Direction, Action, get_state, arg_maxes, state_to_model
@@ -19,7 +20,12 @@ class SpeedAgent(Agent):
         :param speed: The initial speed.
         :param active: Whether or not the agent is not eliminated.
         """
-        super().__init__(model.next_id(), model)
+        if model is None:
+            # use an empty model if an agent is used to play against an online game
+            model = Model()
+            super().__init__(None, model)
+        else:
+            super().__init__(model.next_id(), model)
         self.pos = pos
         self.direction = direction
         self.speed = speed
