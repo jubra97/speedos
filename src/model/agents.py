@@ -81,6 +81,7 @@ class SpeedAgent(Agent):
         if not self.valid_speed():
             self.trace = []
             self.set_inactive()
+            self.elimination_step += 1
             return
 
         # empty the trace
@@ -115,6 +116,7 @@ class SpeedAgent(Agent):
                 # set pos for matching with original game
                 self.pos = (new_x, new_y)
                 self.set_inactive()
+                self.elimination_step += 1
                 reached_new_pos = False
                 break
 
@@ -143,7 +145,7 @@ class SpeedAgent(Agent):
         self.active = False
         if self in self.model.active_speed_agents:
             self.model.active_speed_agents.remove(self)
-        self.elimination_step = self.model.schedule.steps + 1
+        self.elimination_step = self.model.schedule.steps
 
 
 class AgentDummy(SpeedAgent):
