@@ -224,7 +224,7 @@ class NStepSurvivalAgent(SpeedAgent):
     """
     Agent that calculates the next steps and chooses an action where he survives.
     """
-    def __init__(self, model, pos, direction, speed=1, active=True, depth=4):
+    def __init__(self, model, pos, direction, speed=1, active=True, depth=6):
         super().__init__(model, pos, direction, speed, active)
         self.depth = depth
 
@@ -234,7 +234,7 @@ class NStepSurvivalAgent(SpeedAgent):
         model = state_to_model(state)
 
         nb_active_agents = len(model.active_speed_agents)
-        action_permutations = list(permutations(list(Action), nb_active_agents * n))
+        action_permutations = list(permutations(list(Action), nb_active_agents * self.depth))
         for action_permutation in action_permutations:
             for s in range(self.depth):
                 own_agent = model.get_agent_by_id(own_id)
@@ -251,7 +251,7 @@ class MultiMiniMaxAgent(SpeedAgent):
     """
     Agent that chooses an action based on the multi minimax algorithm
     """
-    def __init__(self, model, pos, direction, speed=1, active=True, depth=4):
+    def __init__(self, model, pos, direction, speed=1, active=True, depth=8):
         super().__init__(model, pos, direction, speed, active)
         self.depth = depth
 
