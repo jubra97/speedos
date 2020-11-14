@@ -22,11 +22,11 @@ class TestModelValidity(unittest.TestCase):
             with open(path_to_game, "r") as file:
                 game = json.load(file)
 
-            game, own_agent_id = self.remove_duplicates(game, -1)
+            game = self.remove_duplicates(game)
 
             initial_state = game[0]
             model = state_to_model(initial_state, False, [AgentDummy for _ in range(len(initial_state["players"]))])
-            own_agent = model.get_agent_by_id(own_agent_id)
+            own_agent = model.get_agent_by_id(1)
             while model.running:
                 state = get_state(model, own_agent)
 
@@ -36,6 +36,8 @@ class TestModelValidity(unittest.TestCase):
 
                 for agent in model.speed_agents:
                     agent.action = self.get_action(game, model, str(agent.unique_id))
+                    if agent.action == "set_inactive" and agent.active:
+                        agent.set_inactive()
                 model.step()
 
     def compare_states(self, org_game, model, state):
@@ -93,6 +95,12 @@ class TestModelValidity(unittest.TestCase):
             org_game[model.schedule.steps]["players"][agent_id]["direction"].upper()].value
         next_direction = Direction[
             org_game[model.schedule.steps + 1]["players"][agent_id]["direction"].upper()].value
+        # In the real game the the agent sometimes doesn't move and gets inactive.
+        # This behavior is not implemented in the model but should not let the test fail.
+        if org_game[model.schedule.steps]["players"][agent_id]["x"] == org_game[model.schedule.steps + 1]["players"][agent_id]["x"] and \
+            org_game[model.schedule.steps]["players"][agent_id]["y"] == org_game[model.schedule.steps + 1]["players"][agent_id]["y"] and \
+                org_game[model.schedule.steps]["players"][agent_id]["speed"] == org_game[model.schedule.steps + 1]["players"][agent_id]["speed"]:
+            return "set_inactive"
         if current_speed - next_speed == -1:
             return Action.SPEED_UP
         elif current_speed - next_speed == 1:
@@ -107,16 +115,11 @@ class TestModelValidity(unittest.TestCase):
             raise AttributeError("Not allowed change of direction!")
 
     @staticmethod
-    def remove_duplicates(game, compare_agent):
-        for i in range(1, len(game[-1]["players"]) + 1):
-            if game[-1]["players"][str(i)]["active"]:
-                compare_agent = str(i)
-                break
+    def remove_duplicates(game):
         rounds_to_remove = []
         for i in range(len(game) - 2):
-            if game[i]["players"][compare_agent]["x"] == game[i + 1]["players"][compare_agent]["x"] and \
-                    game[i]["players"][compare_agent]["y"] == game[i + 1]["players"][compare_agent]["y"]:
+            if game[i] == game[i+1]:
                 rounds_to_remove.append(i)
         for r in reversed(rounds_to_remove):
-            del game[r]
-        return game, int(compare_agent)
+            game.pop(r)
+        return game

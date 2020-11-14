@@ -2,14 +2,15 @@ from src.rl.agent import RLAgent
 from src.utils import arg_maxes
 from functools import reduce
 import numpy as np
+import pandas as pd
 import datetime
 
 
 class QAgent(RLAgent):
 
-    def __init__(self, env):
+    def __init__(self, env, dynamic=False):
         super().__init__(env)
-        self.q_table = QTable(self.observation_space, self.action_space)
+        self.q_table = QTable(self.observation_space, self.action_space, dynamic)
 
     def learn(self, nb_episodes, alpha_start=0.1, alpha_min=0.1, gamma=0.99, epsilon_start=1, epsilon_min=0.02,
               exploration_fraction=0.6, nb_max_episode_steps=None, callback=None, visualize=False, tb_log_name=None,
@@ -76,9 +77,10 @@ class QTable:
     Only works for box observation space with one-dimensional shape and discrete action space
     """
 
-    def __init__(self, observation_space, action_space):
+    def __init__(self, observation_space, action_space, dynamic=False):
         self.observation_space = observation_space
         self.action_space = action_space
+        self.dynamic = dynamic
         self.q = self._init_q()
 
     def update(self, transition, alpha, gamma):
@@ -92,46 +94,61 @@ class QTable:
 
     def get_qs(self, state):
         encoded_state = self.encode_observation(state)
-        return self.q[encoded_state]
+        if self.dynamic:
+            self._check_state(encoded_state)
+            return self.q.loc[encoded_state]
+        else:
+            return self.q[encoded_state]
 
     def get_q(self, state, action):
         encoded_state = self.encode_observation(state)
-        return self.q[encoded_state, action]
+        if self.dynamic:
+            self._check_state(encoded_state)
+            return self.q.loc[encoded_state][action]
+        else:
+            return self.q[encoded_state, action]
 
     def set_q(self, state, action, q):
         encoded_state = self.encode_observation(state)
-        self.q[encoded_state][action] = q
+        if self.dynamic:
+            self.q.loc[encoded_state][action] = q
+        else:
+            self.q[encoded_state][action] = q
 
     def save(self, filename):
-        np.save(filename, self.q)
+        if self.dynamic:
+            self.q.to_pickle(filename)
+        else:
+            np.save(filename, self.q)
 
     def load(self, filename):
-        self.q = np.load(filename + '.npy', allow_pickle=True)
+        if self.dynamic:
+            self.q = pd.read_pickle(filename)
+        else:
+            self.q = np.load(filename + '.npy', allow_pickle=True)
 
     def encode_observation(self, obs):
-        base = 1
-        encoded_obs = 0
-        dimensionality = (self.observation_space.high - self.observation_space.low + 1).flatten()
-        obs = np.asarray(obs).flatten()
-        lows = self.observation_space.low.flatten()
-        for idx, obs_dim in enumerate(obs):
-            encoded_obs += base * (obs_dim - lows[idx])
-            base *= dimensionality[idx]
-        return encoded_obs
-
-    def decode_observation(self, encoded_obs):
-        dimensionality = (self.observation_space.high - self.observation_space.low + 1).flatten()
-        base = reduce(lambda a, b: a * b, dimensionality[:-1])
-        obs = np.empty(shape=dimensionality.shape, dtype=np.int)
-        lows = self.observation_space.low.flatten()
-        for i in reversed(range(len(dimensionality))):
-            quotient, remainder = divmod(encoded_obs, base)
-            obs[i] = quotient + lows[i]
-            encoded_obs = remainder
-            if i > 0:
-                base //= dimensionality[i - 1]
-        return obs.reshape(self.observation_space.shape)
+        if self.dynamic:
+            return ''.join(map(str, obs))
+        else:
+            base = 1
+            encoded_obs = 0
+            dimensionality = (self.observation_space.high - self.observation_space.low + 1).flatten()
+            obs = np.asarray(obs).flatten()
+            lows = self.observation_space.low.flatten()
+            for idx, obs_dim in enumerate(obs):
+                encoded_obs += base * (obs_dim - lows[idx])
+                base *= dimensionality[idx]
+            return encoded_obs
 
     def _init_q(self):
-        obs_space_size = self.encode_observation(self.observation_space.high) + 1
-        return np.zeros((obs_space_size, self.action_space.n))
+        if self.dynamic:
+            return pd.DataFrame(columns=range(self.action_space.n), dtype='float')
+        else:
+            obs_space_size = self.encode_observation(self.observation_space.high) + 1
+            return np.zeros((obs_space_size, self.action_space.n))
+
+    def _check_state(self, state):
+        encoded_state = self.encode_observation(state)
+        if encoded_state not in self.q.index:
+            self.q = self.q.append(pd.Series([0] * self.action_space.n, index=self.q.columns, name=encoded_state))

@@ -1,9 +1,11 @@
 from mesa import Agent
+from mesa import Model
 from abc import abstractmethod
 from itertools import permutations
 from src.utils import Direction, Action, get_state, arg_maxes, state_to_model
 from src.heuristics import heuristics
 import numpy as np
+from pynput import keyboard
 
 
 class SpeedAgent(Agent):
@@ -19,7 +21,12 @@ class SpeedAgent(Agent):
         :param speed: The initial speed.
         :param active: Whether or not the agent is not eliminated.
         """
-        super().__init__(model.next_id(), model)
+        if model is None:
+            # use an empty model if an agent is used to play against an online game
+            model = Model()
+            super().__init__(None, model)
+        else:
+            super().__init__(model.next_id(), model)
         self.pos = pos
         self.direction = direction
         self.speed = speed
@@ -75,6 +82,7 @@ class SpeedAgent(Agent):
         if not self.valid_speed():
             self.trace = []
             self.set_inactive()
+            self.elimination_step += 1
             return
 
         # empty the trace
@@ -109,6 +117,7 @@ class SpeedAgent(Agent):
                 # set pos for matching with original game
                 self.pos = (new_x, new_y)
                 self.set_inactive()
+                self.elimination_step += 1
                 reached_new_pos = False
                 break
 
@@ -122,6 +131,7 @@ class SpeedAgent(Agent):
         pos = new_pos
         if reached_new_pos:
             self.model.grid.move_agent(self, pos)
+            self.trace.append(pos)
             # swapped position args since cells has the format (height, width)
             self.model.cells[pos[1], pos[0]] = self.unique_id
 
@@ -136,7 +146,7 @@ class SpeedAgent(Agent):
         self.active = False
         if self in self.model.active_speed_agents:
             self.model.active_speed_agents.remove(self)
-        self.elimination_step = self.model.schedule.steps + 1
+        self.elimination_step = self.model.schedule.steps
 
 
 class AgentDummy(SpeedAgent):
@@ -246,6 +256,24 @@ class NStepSurvivalAgent(SpeedAgent):
 
         return np.random.choice(arg_maxes(survival.values(), list(survival.keys())))
 
+
+class HumanAgent(SpeedAgent):
+
+    def act(self, state):
+        with keyboard.Events() as events:
+            # Block for as much as possible
+            input_key = events.get(1000000).key
+
+        if input_key == keyboard.KeyCode.from_char('w'):
+            return Action.SPEED_UP
+        elif input_key == keyboard.KeyCode.from_char('s'):
+            return Action.SLOW_DOWN
+        elif input_key == keyboard.KeyCode.from_char('a'):
+            return Action.TURN_LEFT
+        elif input_key == keyboard.KeyCode.from_char('d'):
+            return Action.TURN_RIGHT
+        else:
+            return Action.CHANGE_NOTHING
 
 class MultiMiniMaxAgent(SpeedAgent):
     """
