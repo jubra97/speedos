@@ -3,7 +3,7 @@ from mesa.visualization.UserParam import UserSettableParameter
 from mesa.visualization.ModularVisualization import ModularServer
 from collections import defaultdict
 from src.model.model import SpeedModel
-from src.model.agents import SpeedAgent, AgentTrace, HumanAgent, OneStepSurvivalAgent, RandomAgent
+from src.model.agents import SpeedAgent, AgentTrace, HumanAgent, OneStepSurvivalAgent, RandomAgent, MultiMiniMaxAgent
 
 
 class CustomCanvasGrid(CanvasGrid):

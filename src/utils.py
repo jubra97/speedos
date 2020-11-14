@@ -1,4 +1,5 @@
 from enum import Enum
+import numpy as np
 import json
 
 
@@ -42,7 +43,7 @@ def model_to_json(model):
     return {
         "width": model.width,
         "height": model.height,
-        "cells": model.cells,
+        "cells": model.cells.copy(),
         "players": players,
         "running": model.running
     }
@@ -91,6 +92,13 @@ def state_to_model(state, initialize_cells=False, agent_classes=None, additional
     model = SpeedModel(width, height, nb_agents, state["cells"] if not initialize_cells else None, initial_params,
                        agent_classes)
     return model
+
+
+def evaluate_position(model, agent):
+    if not agent.active:
+        return -1
+    else:
+        return 1
 
 
 def json_to_history(path_to_json, output_path, horizontal=False):

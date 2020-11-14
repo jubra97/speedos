@@ -3,6 +3,7 @@ from mesa import Model
 from abc import abstractmethod
 from itertools import permutations
 from src.utils import Direction, Action, get_state, arg_maxes, state_to_model
+from src.heuristics import heuristics
 import numpy as np
 from pynput import keyboard
 
@@ -204,25 +205,8 @@ class RandomAgent(SpeedAgent):
 
 class OneStepSurvivalAgent(SpeedAgent):
     """
-    Agent that chooses random actions.
+    Agent that calculates the next step and chooses an action where he survives.
     """
-
-    def act(self, state):
-        own_id = state["you"]
-        own_props = state["players"][str(own_id)]
-        possible_actions = list(Action)
-        if own_props["speed"] == 1:
-            possible_actions.remove(Action.SLOW_DOWN)
-        elif own_props["speed"] == 10:
-            possible_actions.remove(Action.SPEED_UP)
-        return self.random.choice(possible_actions)
-
-
-class OneStepSurvivalAgent(SpeedAgent):
-    """
-    Agent that chooses random actions.
-    """
-
     def act(self, state):
         own_id = state["you"]
         survival = dict.fromkeys(list(Action), 0)
@@ -238,6 +222,36 @@ class OneStepSurvivalAgent(SpeedAgent):
             model.step()
             if own_agent.active:
                 survival[own_agent.action] += 1
+            model = state_to_model(state)
+
+        amaxes = arg_maxes(survival.values(), list(survival.keys()))
+        if len(amaxes) == 0:
+            amaxes = list(Action)
+        return np.random.choice(amaxes)
+
+
+class NStepSurvivalAgent(SpeedAgent):
+    """
+    Agent that calculates the next steps and chooses an action where he survives.
+    """
+    def __init__(self, model, pos, direction, speed=1, active=True, depth=6):
+        super().__init__(model, pos, direction, speed, active)
+        self.depth = depth
+
+    def act(self, state):
+        own_id = state["you"]
+        survival = dict.fromkeys(list(Action), 0)
+        model = state_to_model(state)
+
+        nb_active_agents = len(model.active_speed_agents)
+        action_permutations = list(permutations(list(Action), nb_active_agents * self.depth))
+        for action_permutation in action_permutations:
+            for s in range(self.depth):
+                own_agent = model.get_agent_by_id(own_id)
+                for idx, agent in enumerate(model.active_speed_agents):
+                    agent.action = action_permutation[idx+s]
+                model.step()
+            survival[own_agent.action] += heuristics.evaluate_position(model, own_agent)
             model = state_to_model(state)
 
         return np.random.choice(arg_maxes(survival.values(), list(survival.keys())))
@@ -260,3 +274,18 @@ class HumanAgent(SpeedAgent):
             return Action.TURN_RIGHT
         else:
             return Action.CHANGE_NOTHING
+
+class MultiMiniMaxAgent(SpeedAgent):
+    """
+    Agent that chooses an action based on the multi minimax algorithm
+    """
+    def __init__(self, model, pos, direction, speed=1, active=True, depth=8):
+        super().__init__(model, pos, direction, speed, active)
+        self.depth = depth
+
+    def act(self, state):  # TODO: Pass depth as an __init__-arg
+        # TODO: depth could be a dynamic parameter (dependent on currently living players)
+        action = heuristics.multi_minimax(self.depth, state)
+        return action
+
+

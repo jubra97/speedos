@@ -7,6 +7,8 @@ from mesa import Model
 from mesa.time import SimultaneousActivation
 from mesa.space import MultiGrid
 import numpy as np
+from src.model.agents import SpeedAgent, AgentTrace, OneStepSurvivalAgent, AgentTraceCollision, MultiMiniMaxAgent
+from src.utils import Direction
 from src.model.agents import SpeedAgent, AgentTrace, OneStepSurvivalAgent, AgentTraceCollision
 from src.utils import Direction, model_to_json
 
@@ -101,6 +103,17 @@ class SpeedModel(Model):
         self.check_collisions()
         self.check_game_finished()
 
+    def step_specific_agent(self, agent):
+        """
+        Only steps one specific agent. This is only for specific applications (e.g. Multi-Minimax).
+        Don't use this method if not necessary since it doesn't increment all model parts (e.g. time).
+        :return: None
+        """
+        agent.step()
+        agent.advance()
+        self.check_collisions()
+        self.check_game_finished()
+
     def check_collisions(self):
         """
         Checks every active agent for collisions with traces or other agents. Colliding agents are eliminated.
@@ -144,6 +157,10 @@ class SpeedModel(Model):
             lambda agent: {"ID: ": agent.unique_id, "Survived Steps: ": agent.elimination_step},
             self.speed_agents
         ))
+        if len(self.active_speed_agents) == 1:
+            print('Winning Agent: ' + str(self.active_speed_agents[0].unique_id))
+        else:
+            print('Draw')
         print("Standings after {} rounds:\n".format(self.schedule.steps), result)
 
     def add_agent(self, agent):
