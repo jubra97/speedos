@@ -31,7 +31,6 @@ def multi_minimax(depth, game_state):
             #     print("%s%s" % (pre, node.name))
 
             model = state_to_model(pre_state)
-            # BUG: min_move is almost every time inf for change nothing: WHY?
             max_player = model.get_agent_by_id(own_id)
             if action == Action.CHANGE_NOTHING and min_move > -1:
                 return action

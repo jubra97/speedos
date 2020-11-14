@@ -275,15 +275,16 @@ class HumanAgent(SpeedAgent):
         else:
             return Action.CHANGE_NOTHING
 
+
 class MultiMiniMaxAgent(SpeedAgent):
     """
     Agent that chooses an action based on the multi minimax algorithm
     """
-    def __init__(self, model, pos, direction, speed=1, active=True, depth=8):
+    def __init__(self, model, pos, direction, speed=1, active=True, depth=4):
         super().__init__(model, pos, direction, speed, active)
         self.depth = depth
 
-    def act(self, state):  # TODO: Pass depth as an __init__-arg
+    def act(self, state):
         # TODO: depth could be a dynamic parameter (dependent on currently living players)
         action = heuristics.multi_minimax(self.depth, state)
         return action
