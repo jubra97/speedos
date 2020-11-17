@@ -1,10 +1,10 @@
-from src.utils import Action, state_to_model, model_to_json, Direction
+from src.utils import Action, state_to_model, model_to_json
 import numpy as np
 from anytree import Node
 import copy
 
 
-def multi_minimax(depth, game_state, super_pruning=True):
+def multi_minimax(depth, game_state, super_pruning=False):
     pruning_threshold = -1
     model = state_to_model(game_state)
     own_id = game_state["you"]
@@ -32,12 +32,14 @@ def multi_minimax(depth, game_state, super_pruning=True):
 
             model = state_to_model(pre_state, trace_aware=True)
             max_player = model.get_agent_by_id(own_id)
-            if super_pruning and action == Action.CHANGE_NOTHING and min_move > pruning_threshold:
-                return action
             beta = min_move
 
             if alpha >= beta:
                 break
+
+        if super_pruning and action == Action.CHANGE_NOTHING and min_move > pruning_threshold:
+            return action
+
         if min_move >= max_move:
             if min_move == max_move:
                 move_to_make = np.random.choice([move_to_make, action])
