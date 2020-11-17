@@ -131,3 +131,39 @@ def json_to_history(path_to_json, output_path, horizontal=False):
             outfile.write("\n-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\n")
 
     outfile.close()
+
+
+def reachable_cells(model, agent):
+    marker = 10
+    reachable_cells_counter = 0
+    cells = model.cells.copy()
+    width, height = model.width, model.height
+
+    init_particles = surrounding_cells(agent.pos, width, height)
+    particles = []
+    for particle in init_particles:
+        if cells[particle[1], particle[0]] == 0:
+            cells[particle[1], particle[0]] = marker
+            particles.append(particle)
+            reachable_cells_counter += 1
+
+    while len(particles) != 0:
+        new_particles = []
+        for particle in particles:
+            surrounding = surrounding_cells(particle, width, height)
+            for cell in surrounding:
+                if cells[cell[1], cell[0]] == 0:
+                    cells[cell[1], cell[0]] = marker
+                    new_particles.append(cell)
+                    reachable_cells_counter += 1
+        particles = new_particles
+    return reachable_cells_counter, cells
+
+
+def surrounding_cells(position, width, height):
+    cells = []
+    x, y = position
+    for d_x, d_y in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+        if 0 <= x + d_x < width and 0 <= y + d_y < height:
+            cells.append((x + d_x, y + d_y))
+    return cells
