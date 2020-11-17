@@ -1,17 +1,25 @@
+import os
+import datetime
+import json
+import copy
+
 from mesa import Model
 from mesa.time import SimultaneousActivation
 from mesa.space import MultiGrid
 import numpy as np
-from src.model.agents import SpeedAgent, AgentTrace, OneStepSurvivalAgent, AgentTraceCollision
+from src.model.agents import SpeedAgent, AgentTrace, OneStepSurvivalAgent, AgentTraceCollision, MultiMiniMaxAgent
 from src.utils import Direction
+from src.model.agents import SpeedAgent, AgentTrace, OneStepSurvivalAgent, AgentTraceCollision
+from src.utils import Direction, model_to_json
 
 
 class SpeedModel(Model):
     """
     Model of the game "Speed". This class controls the execution of the simulation.
     """
+
     def __init__(self, width, height, nb_agents, cells=None, initial_agents_params=None, agent_classes=None,
-                 data_collector=None, verbose=False):
+                 data_collector=None, verbose=False, save=False):
         """
         :param initial_agents_params: A list of dictionaries containing initialization parameters for agents
         that should be initialized at the start of the simulation
@@ -23,6 +31,9 @@ class SpeedModel(Model):
         self.height = height
         self.nb_agents = nb_agents
         self.verbose = verbose
+        self.save = save
+        if self.save:
+            self.history = []
         if initial_agents_params is None:
             initial_agents_params = [{} for i in range(nb_agents)]
 
@@ -86,7 +97,20 @@ class SpeedModel(Model):
         """
         if self.data_collector:
             self.data_collector.collect(self)
+        if self.save:
+            self.history.append(copy.deepcopy(model_to_json(self)))
         self.schedule.step()
+        self.check_collisions()
+        self.check_game_finished()
+
+    def step_specific_agent(self, agent):
+        """
+        Only steps one specific agent. This is only for specific applications (e.g. Multi-Minimax).
+        Don't use this method if not necessary since it doesn't increment all model parts (e.g. time).
+        :return: None
+        """
+        agent.step()
+        agent.advance()
         self.check_collisions()
         self.check_game_finished()
 
@@ -116,6 +140,13 @@ class SpeedModel(Model):
             self.running = False
             if self.verbose:
                 self.print_standings()
+            if self.save:
+                self.history.append(copy.deepcopy(model_to_json(self)))
+                path = os.path.abspath("..") + "/res/simulatedGames/"
+                for entry in self.history:
+                    entry["cells"] = entry["cells"].tolist()
+                with open(path + datetime.datetime.now().strftime("%d-%m-%y__%H-%M-%S-%f") + ".json", "w") as f:
+                    json.dump(self.history, f, indent=4)
 
     def print_standings(self):
         """
@@ -126,6 +157,10 @@ class SpeedModel(Model):
             lambda agent: {"ID: ": agent.unique_id, "Survived Steps: ": agent.elimination_step},
             self.speed_agents
         ))
+        if len(self.active_speed_agents) == 1:
+            print('Winning Agent: ' + str(self.active_speed_agents[0].unique_id))
+        else:
+            print('Draw')
         print("Standings after {} rounds:\n".format(self.schedule.steps), result)
 
     def add_agent(self, agent):
