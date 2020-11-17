@@ -91,6 +91,12 @@ def state_to_model(state, initialize_cells=False, agent_classes=None, additional
         agent_classes = [AgentDummy for i in range(nb_agents)]
     model = SpeedModel(width, height, nb_agents, state["cells"] if not initialize_cells else None, initial_params,
                        agent_classes)
+    agents_to_remove = []
+    for agent in model.active_speed_agents:
+        if not agent.active:
+            agents_to_remove.append(agent)
+    for agent in agents_to_remove:
+        model.active_speed_agents.remove(agent)
     return model
 
 

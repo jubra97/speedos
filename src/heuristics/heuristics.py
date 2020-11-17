@@ -2,11 +2,11 @@ from src.utils import Action, state_to_model, model_to_json
 import numpy as np
 from anytree import Node, RenderTree
 from anytree.exporter import DotExporter
+import copy
 
 
 def multi_minimax(depth, game_state):
     threshold_value = -depth+depth/2
-    best_value = 0
     model = state_to_model(game_state)
     own_id = game_state["you"]
     start_node = Node(str(own_id))
@@ -17,7 +17,8 @@ def multi_minimax(depth, game_state):
     move_to_make = Action.CHANGE_NOTHING
     max_move = float("-inf")
     alpha = float("-inf")
-    for action in reversed(list(Action)):
+    copy_actions = copy.deepcopy(list(Action))
+    for action in reversed(copy_actions):
         pre_state = model_to_json(model)
         update_game_state(model, max_player, action)
         node = Node(str(min_player_ids), parent=start_node)
@@ -31,9 +32,9 @@ def multi_minimax(depth, game_state):
             #     print("%s%s" % (pre, node.name))
 
             model = state_to_model(pre_state)
-            # BUG: min_move is almost every time inf for change nothing: WHY?
             max_player = model.get_agent_by_id(own_id)
             if action == Action.CHANGE_NOTHING and min_move > -1:
+                # copy_actions = [action for action in copy_actions if action is not Action.TURN_RIGHT and action is not Action.TURN_LEFT]
                 return action
             beta = min_move
 
@@ -73,8 +74,8 @@ def minimax(max_player, min_player, depth, alpha, beta, is_max, model, last_pare
             min_player = model.get_agent_by_id(min_player_id)
 
             alpha = max(alpha, max_move)
-            #if alpha >= beta:
-            #    break
+            if alpha >= beta:
+                break
         return max_move
     else:
         min_move = float("inf")
@@ -82,6 +83,8 @@ def minimax(max_player, min_player, depth, alpha, beta, is_max, model, last_pare
         for action in list(Action):
             update_game_state(model, min_player, action)
             node = Node(str(max_player.unique_id), parent=last_parent_node)
+            if not min_player.active and min_player.pos == max_player.pos:
+                max_player.set_inactive()
 
             min_move = min(min_move, minimax(max_player, min_player, depth-1, alpha, beta, True, model, node))
 
@@ -91,9 +94,9 @@ def minimax(max_player, min_player, depth, alpha, beta, is_max, model, last_pare
             min_player_id = min_player.unique_id
             min_player = model.get_agent_by_id(min_player_id)
 
-            beta = min(alpha, min_move)
-            #if alpha >= beta:
-            #    break
+            beta = min(beta, min_move)
+            if alpha >= beta:
+                break
         return min_move
 
 
