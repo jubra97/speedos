@@ -1,3 +1,4 @@
+import copy
 from enum import Enum
 import numpy as np
 import json
@@ -24,21 +25,24 @@ class Action(Enum):
         return self.name.lower()
 
 
-def agent_to_json(agent):
+def agent_to_json(agent, trace_aware=False):
     x, y = agent.pos
-    return {
+    agent_json = {
         "x": x,
         "y": y,
         "direction": str(agent.direction),
         "speed": agent.speed,
         "active": agent.active
     }
+    if trace_aware:
+        agent_json["trace"] = copy.deepcopy(agent.trace)
+    return agent_json
 
 
-def model_to_json(model):
+def model_to_json(model, trace_aware=False):
     players = dict()
     for agent in model.speed_agents:
-        players[str(agent.unique_id)] = agent_to_json(agent)
+        players[str(agent.unique_id)] = agent_to_json(agent, trace_aware)
 
     return {
         "width": model.width,
@@ -70,7 +74,7 @@ def arg_maxes(arr, indices=None):
     return maxes
 
 
-def state_to_model(state, initialize_cells=False, agent_classes=None, additional_params=None):
+def state_to_model(state, initialize_cells=False, agent_classes=None, additional_params=None, trace_aware=False):
     width = state["width"]
     height = state["height"]
     nb_agents = len(state["players"])
@@ -80,8 +84,10 @@ def state_to_model(state, initialize_cells=False, agent_classes=None, additional
             "pos": (values["x"], values["y"]),
             "direction": Direction[values["direction"].upper()],
             "speed": values["speed"],
-            "active": values["active"]
+            "active": values["active"],
         })
+        if trace_aware:
+            initial_params[i]["trace"] = copy.deepcopy(values["trace"])
         if additional_params is not None:
             initial_params[i] = {**initial_params[i], **additional_params[i]}
     # TODO: doesnt work with global import, cyclic import?
@@ -137,3 +143,39 @@ def json_to_history(path_to_json, output_path, horizontal=False):
             outfile.write("\n-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\n")
 
     outfile.close()
+
+
+def reachable_cells(model, agent):
+    marker = 10
+    reachable_cells_counter = 0
+    cells = model.cells.copy()
+    width, height = model.width, model.height
+
+    init_particles = surrounding_cells(agent.pos, width, height)
+    particles = []
+    for particle in init_particles:
+        if cells[particle[1], particle[0]] == 0:
+            cells[particle[1], particle[0]] = marker
+            particles.append(particle)
+            reachable_cells_counter += 1
+
+    while len(particles) != 0:
+        new_particles = []
+        for particle in particles:
+            surrounding = surrounding_cells(particle, width, height)
+            for cell in surrounding:
+                if cells[cell[1], cell[0]] == 0:
+                    cells[cell[1], cell[0]] = marker
+                    new_particles.append(cell)
+                    reachable_cells_counter += 1
+        particles = new_particles
+    return reachable_cells_counter, cells
+
+
+def surrounding_cells(position, width, height):
+    cells = []
+    x, y = position
+    for d_x, d_y in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+        if 0 <= x + d_x < width and 0 <= y + d_y < height:
+            cells.append((x + d_x, y + d_y))
+    return cells

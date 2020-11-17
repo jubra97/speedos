@@ -2,7 +2,7 @@ from mesa import Agent
 from mesa import Model
 from abc import abstractmethod
 from itertools import permutations
-from src.utils import Direction, Action, get_state, arg_maxes, state_to_model
+from src.utils import Direction, Action, get_state, arg_maxes, state_to_model, model_to_json
 from src.heuristics import heuristics
 import numpy as np
 from pynput import keyboard
@@ -13,7 +13,7 @@ class SpeedAgent(Agent):
     Abstract representation of an Agent in Speed.
     """
 
-    def __init__(self, model, pos, direction, speed=1, active=True):
+    def __init__(self, model, pos, direction, speed=1, active=True, trace=None):
         """
         :param model: The model that the agent lives in.
         :param pos: The initial position in (x, y)
@@ -31,9 +31,13 @@ class SpeedAgent(Agent):
         self.direction = direction
         self.speed = speed
         self.active = active
+        # Holds all cells that were visited in the last step
+        if trace is None:
+            self.trace = []
+        else:
+            self.trace = trace
 
         self.action = None
-        self.trace = []  # Holds all cells that were visited in the last step
         self.elimination_step = -1  # Saves the step that the agent was eliminated in (-1 if still active)
 
     @abstractmethod
@@ -131,7 +135,6 @@ class SpeedAgent(Agent):
         pos = new_pos
         if reached_new_pos:
             self.model.grid.move_agent(self, pos)
-            self.trace.append(pos)
             # swapped position args since cells has the format (height, width)
             self.model.cells[pos[1], pos[0]] = self.unique_id
 
@@ -234,27 +237,42 @@ class NStepSurvivalAgent(SpeedAgent):
     """
     Agent that calculates the next steps and chooses an action where he survives.
     """
-    def __init__(self, model, pos, direction, speed=1, active=True, depth=6):
+    def __init__(self, model, pos, direction, speed=1, active=True, depth=2):
         super().__init__(model, pos, direction, speed, active)
         self.depth = depth
+        self.survival = None
 
     def act(self, state):
-        own_id = state["you"]
-        survival = dict.fromkeys(list(Action), 0)
-        model = state_to_model(state)
+        self.survival = dict.fromkeys(list(Action), 0)
+        self.deep_search(state, self.depth, None)
+        amaxes = arg_maxes(self.survival.values(), list(self.survival.keys()))
+        if len(amaxes) == 0:
+            amaxes = list(Action)
+        return np.random.choice(amaxes)
 
-        nb_active_agents = len(model.active_speed_agents)
-        action_permutations = list(permutations(list(Action), nb_active_agents * self.depth))
-        for action_permutation in action_permutations:
-            for s in range(self.depth):
+    def deep_search(self, state, depth, initial_action):
+        own_id = state["you"]
+
+        if not state["players"][str(own_id)]["active"]:
+            return
+        elif depth == 0:
+            self.survival[initial_action] += 1
+        else:
+            model = state_to_model(state)
+            nb_active_agents = len(model.active_speed_agents)
+            action_permutations = list(permutations(list(Action), nb_active_agents))
+            for action_permutation in action_permutations:
                 own_agent = model.get_agent_by_id(own_id)
                 for idx, agent in enumerate(model.active_speed_agents):
-                    agent.action = action_permutation[idx+s]
+                    agent.action = action_permutation[idx]
                 model.step()
-            survival[own_agent.action] += heuristics.evaluate_position(model, own_agent)
-            model = state_to_model(state)
-
-        return np.random.choice(arg_maxes(survival.values(), list(survival.keys())))
+                new_state = get_state(model, own_agent)
+                # recursion
+                if initial_action is None:
+                    self.deep_search(new_state, depth - 1, own_agent.action)
+                else:
+                    self.deep_search(new_state, depth - 1, initial_action)
+                model = state_to_model(state)
 
 
 class HumanAgent(SpeedAgent):
@@ -280,7 +298,7 @@ class MultiMiniMaxAgent(SpeedAgent):
     """
     Agent that chooses an action based on the multi minimax algorithm
     """
-    def __init__(self, model, pos, direction, speed=1, active=True, base_depth=10):
+    def __init__(self, model, pos, direction, speed=1, active=True, base_depth=6):
         super().__init__(model, pos, direction, speed, active)
         self.base_depth = base_depth
 
