@@ -1,3 +1,4 @@
+import copy
 from enum import Enum
 import numpy as np
 import json
@@ -24,21 +25,24 @@ class Action(Enum):
         return self.name.lower()
 
 
-def agent_to_json(agent):
+def agent_to_json(agent, trace_aware=False):
     x, y = agent.pos
-    return {
+    agent_json = {
         "x": x,
         "y": y,
         "direction": str(agent.direction),
         "speed": agent.speed,
         "active": agent.active
     }
+    if trace_aware:
+        agent_json["trace"] = copy.deepcopy(agent.trace)
+    return agent_json
 
 
-def model_to_json(model):
+def model_to_json(model, trace_aware=False):
     players = dict()
     for agent in model.speed_agents:
-        players[str(agent.unique_id)] = agent_to_json(agent)
+        players[str(agent.unique_id)] = agent_to_json(agent, trace_aware)
 
     return {
         "width": model.width,
@@ -70,7 +74,7 @@ def arg_maxes(arr, indices=None):
     return maxes
 
 
-def state_to_model(state, initialize_cells=False, agent_classes=None, additional_params=None):
+def state_to_model(state, initialize_cells=False, agent_classes=None, additional_params=None, trace_aware=False):
     width = state["width"]
     height = state["height"]
     nb_agents = len(state["players"])
@@ -80,8 +84,10 @@ def state_to_model(state, initialize_cells=False, agent_classes=None, additional
             "pos": (values["x"], values["y"]),
             "direction": Direction[values["direction"].upper()],
             "speed": values["speed"],
-            "active": values["active"]
+            "active": values["active"],
         })
+        if trace_aware:
+            initial_params[i]["trace"] = copy.deepcopy(values["trace"])
         if additional_params is not None:
             initial_params[i] = {**initial_params[i], **additional_params[i]}
     # TODO: doesnt work with global import, cyclic import?

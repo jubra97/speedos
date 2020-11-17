@@ -48,8 +48,8 @@ def agent_portrayal(agent):
 
 
 # Parameters
-WIDTH = 10
-HEIGHT = 10
+WIDTH = 5
+HEIGHT = 5
 COLOR_PALETTE = [
     'green',
     'blue',
@@ -61,8 +61,8 @@ COLOR_PALETTE = [
 model_params = {
     "width": WIDTH,
     "height": HEIGHT,
-    "agent_classes": [MultiMiniMaxAgent, OneStepSurvivalAgent, OneStepSurvivalAgent],
-    "nb_agents": UserSettableParameter('slider', 'Amount of Agents', value=3, min_value=1, max_value=6, step=1)
+    "agent_classes": [MultiMiniMaxAgent, MultiMiniMaxAgent],
+    "nb_agents": UserSettableParameter('slider', 'Amount of Agents', value=2, min_value=1, max_value=6, step=1)
 }
 grid = CustomCanvasGrid(agent_portrayal, WIDTH, HEIGHT, 700, 700)
 

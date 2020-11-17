@@ -13,7 +13,7 @@ class SpeedAgent(Agent):
     Abstract representation of an Agent in Speed.
     """
 
-    def __init__(self, model, pos, direction, speed=1, active=True):
+    def __init__(self, model, pos, direction, speed=1, active=True, trace=None):
         """
         :param model: The model that the agent lives in.
         :param pos: The initial position in (x, y)
@@ -31,9 +31,13 @@ class SpeedAgent(Agent):
         self.direction = direction
         self.speed = speed
         self.active = active
+        # Holds all cells that were visited in the last step
+        if trace is None:
+            self.trace = []
+        else:
+            self.trace = trace
 
         self.action = None
-        self.trace = []  # Holds all cells that were visited in the last step
         self.elimination_step = -1  # Saves the step that the agent was eliminated in (-1 if still active)
 
     @abstractmethod
@@ -131,7 +135,6 @@ class SpeedAgent(Agent):
         pos = new_pos
         if reached_new_pos:
             self.model.grid.move_agent(self, pos)
-            self.trace.append(pos)
             # swapped position args since cells has the format (height, width)
             self.model.cells[pos[1], pos[0]] = self.unique_id
 
@@ -295,7 +298,7 @@ class MultiMiniMaxAgent(SpeedAgent):
     """
     Agent that chooses an action based on the multi minimax algorithm
     """
-    def __init__(self, model, pos, direction, speed=1, active=True, base_depth=10):
+    def __init__(self, model, pos, direction, speed=1, active=True, base_depth=6):
         super().__init__(model, pos, direction, speed, active)
         self.base_depth = base_depth
 
