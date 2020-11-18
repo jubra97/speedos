@@ -8,8 +8,9 @@ from src.model.model import SpeedModel
 
 class Evaluator:
 
-    def __init__(self, model_params):
+    def __init__(self, model_params, parameter_settings_info=None):
         self.model_params = model_params
+        self.parameter_settings_info = parameter_settings_info
 
         self.model = SpeedModel(**model_params)
         self.win_table = None
@@ -34,7 +35,7 @@ class Evaluator:
         index = [f"Agent {i + 1} ({str(type(self.model.get_agent_by_id(i + 1)).__name__)})"
                  for i in range(self.model.nb_agents)]
 
-        self.win_table /= repetitions
+        self.win_table *= 100 / repetitions  # convert to percentages
         win_df = pd.DataFrame(self.win_table, index=index, columns=["Wins [%]", "Ties [%]", "Losses [%]"])
 
         elimination_data = {"ES Mean": [], "ES Std": []}
@@ -48,7 +49,9 @@ class Evaluator:
                                              columns=["EA Left", "EA Right", "EA Slow Down",
                                                       "EA Speed Up", "EA Change Nothing"])
 
-        self.agent_independent_table[1] /= self.model.width * self.model.height
+        agent_table = win_df.join(elimination_step_df).join(elimination_action_df)
+
+        self.agent_independent_table[1] *= 100 / (self.model.width * self.model.height)  # convert to percentages
         agent_independent_df = pd.DataFrame({
             "Game Duration Mean": np.mean(self.agent_independent_table[0]),
             "Game Duration Std": np.std(self.agent_independent_table[0]),
@@ -56,12 +59,25 @@ class Evaluator:
             "Empty Cells Std [%]": np.std(self.agent_independent_table[1])
         }, index=["Data"])
 
-        agent_table = win_df.join(elimination_step_df).join(elimination_action_df)
+        parameter_settings = {
+            "Width": self.model.width,
+            "Height": self.model.height,
+            "Repetitions": repetitions
+        }
+        if self.parameter_settings_info:
+            parameter_settings = {**parameter_settings, **self.parameter_settings_info} # join the dicts
+        parameter_settings_df = pd.DataFrame(parameter_settings, index=["Data"])
+
         timestamp = datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
 
         if save:
-            agent_table.to_csv(f"../../res/evaluation/agent_table_{timestamp}.csv")
-            agent_independent_df.to_csv(f"../../res/evaluation/global_table_{timestamp}.csv")
+            writer = pd.ExcelWriter(f"../../res/evaluation/eval_{timestamp}.xlsx", engine='xlsxwriter')
+
+            agent_table.to_excel(writer, sheet_name='Agents')
+            agent_independent_df.to_excel(writer, sheet_name='Global')
+            parameter_settings_df.to_excel(writer, sheet_name='Parameter Settings')
+
+            writer.save()
 
         if show:
             agent_table.to_html('temp_agents.html')
@@ -69,6 +85,9 @@ class Evaluator:
 
             agent_independent_df.to_html('temp_global.html')
             webbrowser.open_new_tab('temp_global.html')
+
+            parameter_settings_df.to_html('temp_settings.html')
+            webbrowser.open_new_tab('temp_settings.html')
 
     def _init_tables(self, repetitions):
         self.win_table = np.zeros((self.model.nb_agents, 3))
