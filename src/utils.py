@@ -179,3 +179,103 @@ def surrounding_cells(position, width, height):
         if 0 <= x + d_x < width and 0 <= y + d_y < height:
             cells.append((x + d_x, y + d_y))
     return cells
+
+
+class Particle:
+
+    def __init__(self, position, direction, speed, timestamp):
+        self.position = position
+        self.direction = direction
+        self.speed = speed
+        self.timestamp = timestamp
+
+
+def reachable_cells_with_timestamp(model, agent):
+    cells = model.cells
+    particle_cells = np.empty(cells.shape, dtype=object)
+    # TODO: Add cells array that holds all trace-positions with the lowest timestamp
+    #  (so we can see if an agent can cut off another agent)
+
+    init_particle = Particle(agent.pos, agent.direction, agent.speed, model.schedule.steps)
+    particles = get_new_particles(cells, particle_cells, init_particle)
+
+    while len(particles) != 0:
+        new_particles = []
+        for particle in particles:
+            new_particles.extend(get_new_particles(cells, particle_cells, particle))
+
+        particles = new_particles
+    return particle_cells
+
+
+def get_new_particles(cells, particle_cells, particle):
+    new_particles = []
+    for action in list(Action):
+        trace, new_particle = get_action_trace(particle.position, particle.direction, particle.speed, action,
+                                               particle.timestamp, cells.shape)
+        collision = False
+        for t in trace:
+            if cells[t[1], t[0]] != 0:
+                collision = True
+
+        # TODO: Maybe add a timestamp-difference threshold to avoid throwing away most slow particles
+        #  or/and also execute the algorithm with speed 1 only and merge the results to fill high speed gaps.
+        if not collision and new_particle is not None and (particle_cells[new_particle.position[1], new_particle.position[0]] is None or
+                particle_cells[new_particle.position[1], new_particle.position[0]].timestamp == new_particle.timestamp):
+            new_particles.append(new_particle)
+            if particle_cells[new_particle.position[1], new_particle.position[0]] is None:
+                particle_cells[new_particle.position[1], new_particle.position[0]] = new_particle
+    return new_particles
+
+
+def out_of_bounds(cell_size, pos) -> bool:
+    x, y = pos
+    return x < 0 or x >= cell_size[1] or y < 0 or y >= cell_size[0]
+
+
+def get_action_trace(position, direction, speed, action, timestamp, cells_size):
+    timestamp += 1
+
+    # update direction and speed according to action
+    if action == Action.TURN_LEFT:
+        direction = Direction((direction.value - 1) % 4)
+    elif action == Action.TURN_RIGHT:
+        direction = Direction((direction.value + 1) % 4)
+    elif action == Action.SLOW_DOWN:
+        speed -= 1
+    elif action == Action.SPEED_UP:
+        speed += 1
+
+    # check invalid speed
+    if not 1 <= speed <= 10:
+        return [], None
+
+    # empty the trace
+    trace = []
+
+    # init new pos
+    new_x = position[0]
+    new_y = position[1]
+
+    # visit all cells that are within "speed"
+    for i in range(speed):
+        # update position
+        if direction == Direction.UP:
+            new_y -= 1
+        elif direction == Direction.DOWN:
+            new_y += 1
+        elif direction == Direction.LEFT:
+            new_x -= 1
+        elif direction == Direction.RIGHT:
+            new_x += 1
+        new_pos = (new_x, new_y)
+        # check borders and speed
+        if out_of_bounds(cells_size, new_pos):
+            return [], None
+
+        # create trace
+        # trace gaps occur every 6 rounds if the speed is higher than 2.
+        if timestamp % 6 != 0 or speed < 3 or i == 1 or i == 0:
+            trace.append(new_pos)
+
+    return trace, Particle(new_pos, direction, speed, timestamp)
