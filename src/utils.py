@@ -183,48 +183,85 @@ def surrounding_cells(position, width, height):
 
 class Particle:
 
-    def __init__(self, position, direction, speed, timestamp):
+    def __init__(self, position, direction, speed, timestamp, path=None, agent_id=-2, battlefront=False):
         self.position = position
         self.direction = direction
         self.speed = speed
         self.timestamp = timestamp
+        self.path = [] if path is None else path
+        self.agent_id = agent_id
+        self.battlefront = battlefront
 
 
-def reachable_cells_with_timestamp(model, agent):
+def sync_voronoi(model, approximation=True):
     cells = model.cells
     particle_cells = np.empty(cells.shape, dtype=object)
-    # TODO: Add cells array that holds all trace-positions with the lowest timestamp
-    #  (so we can see if an agent can cut off another agent)
 
-    init_particle = Particle(agent.pos, agent.direction, agent.speed, model.schedule.steps)
-    particles = get_new_particles(cells, particle_cells, init_particle)
+    particles = []
+    for agent in model.active_speed_agents:
+        particles.append(Particle(agent.pos, agent.direction, agent.speed, model.schedule.steps, [], agent.unique_id))
 
     while len(particles) != 0:
         new_particles = []
         for particle in particles:
-            new_particles.extend(get_new_particles(cells, particle_cells, particle))
+            agent_particles = get_new_particles(cells, particle_cells, particle, approximation)
+            new_particles.extend(agent_particles)
 
         particles = new_particles
     return particle_cells
 
 
-def get_new_particles(cells, particle_cells, particle):
+def voronoi(model, agent, approximation=True):
+    cells = model.cells
+    particle_cells = np.empty(cells.shape, dtype=object)
+
+    init_particle = Particle(agent.pos, agent.direction, agent.speed, model.schedule.steps)
+    particles = get_new_particles(cells, particle_cells, init_particle, approximation)
+
+    while len(particles) != 0:
+        new_particles = []
+        for particle in particles:
+            new_particles.extend(get_new_particles(cells, particle_cells, particle, approximation))
+
+        particles = new_particles
+    return particle_cells
+
+
+def get_new_particles(cells, particle_cells, particle, approximation=True):
     new_particles = []
     for action in list(Action):
-        trace, new_particle = get_action_trace(particle.position, particle.direction, particle.speed, action,
-                                               particle.timestamp, cells.shape)
+        trace, new_particle = get_action_trace(particle, action, cells.shape)
+
+        if not approximation and new_particle is not None:
+            new_particle.path = particle.path + trace
+
         collision = False
         for t in trace:
             if cells[t[1], t[0]] != 0:
                 collision = True
+            if not approximation:
+                for path_cell in particle.path:
+                    if path_cell[0] == t[0] and path_cell[1] == t[1]:
+                        collision = True
 
-        # TODO: Maybe add a timestamp-difference threshold to avoid throwing away most slow particles
-        #  or/and also execute the algorithm with speed 1 only and merge the results to fill high speed gaps.
-        if not collision and new_particle is not None and (particle_cells[new_particle.position[1], new_particle.position[0]] is None or
-                particle_cells[new_particle.position[1], new_particle.position[0]].timestamp == new_particle.timestamp):
-            new_particles.append(new_particle)
-            if particle_cells[new_particle.position[1], new_particle.position[0]] is None:
-                particle_cells[new_particle.position[1], new_particle.position[0]] = new_particle
+        if not collision and new_particle is not None:
+            pos = (new_particle.position[1], new_particle.position[0])
+            same_step_arrival = False
+            if particle_cells[pos] is not None and particle_cells[pos].timestamp == new_particle.timestamp:
+                same_step_arrival = True
+
+            if approximation and (particle_cells[pos] is None or same_step_arrival):
+                if particle_cells[pos] is not None and same_step_arrival:
+                    if particle_cells[pos].agent_id == new_particle.agent_id:
+                        new_particle.battlefront = particle_cells[pos].battlefront
+                    else:
+                        new_particle.battlefront = True
+                new_particles.append(new_particle)
+                particle_cells[pos] = new_particle
+            elif not approximation:
+                new_particles.append(new_particle)
+                if particle_cells[pos] is None:
+                    particle_cells[pos] = new_particle
     return new_particles
 
 
@@ -233,8 +270,11 @@ def out_of_bounds(cell_size, pos) -> bool:
     return x < 0 or x >= cell_size[1] or y < 0 or y >= cell_size[0]
 
 
-def get_action_trace(position, direction, speed, action, timestamp, cells_size):
-    timestamp += 1
+def get_action_trace(particle, action, cells_size):
+    timestamp = particle.timestamp + 1
+    direction = particle.direction
+    speed = particle.speed
+    position = particle.position
 
     # update direction and speed according to action
     if action == Action.TURN_LEFT:
@@ -247,7 +287,7 @@ def get_action_trace(position, direction, speed, action, timestamp, cells_size):
         speed += 1
 
     # check invalid speed
-    if not 1 <= speed <= 10:
+    if not 1 <= speed <= 3:
         return [], None
 
     # empty the trace
@@ -278,4 +318,4 @@ def get_action_trace(position, direction, speed, action, timestamp, cells_size):
         if timestamp % 6 != 0 or speed < 3 or i == 1 or i == 0:
             trace.append(new_pos)
 
-    return trace, Particle(new_pos, direction, speed, timestamp)
+    return trace, Particle(new_pos, direction, speed, timestamp, agent_id=particle.agent_id)
