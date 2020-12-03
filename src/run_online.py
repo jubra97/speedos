@@ -5,14 +5,14 @@ import json
 import websockets
 import asyncio
 
-from src.model.agents import RandomAgent
+from src.model.agents import RandomAgent, MultiMiniMaxAgent
 from src.utils import state_to_model
 
 API_KEY = "IXT57ZEJMO6VFKF3KBZFB4LSEXBMWJ72VEYO2B6WT25UOXEIEAEN25XO"
 
 
 class RunOnline:
-    def __init__(self, agent=RandomAgent, save=True):
+    def __init__(self, agent=MultiMiniMaxAgent, save=True):
         self.connection = None
         self.history = []
         self.agent = agent(None, None, None)
@@ -62,6 +62,7 @@ class RunOnline:
 
 
 if __name__ == "__main__":
+    print("starting")
     runner = RunOnline()
     games = 0
     wins = 0
@@ -70,4 +71,4 @@ if __name__ == "__main__":
         games += 1
         if game["running"] and game["players"][str(game["you"])]["active"]:
             wins += 1
-        print("current stats: " + str(wins/games))
+        print("current stats: " + str(wins/games), flush=True)
