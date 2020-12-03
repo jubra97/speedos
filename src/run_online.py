@@ -42,8 +42,8 @@ class RunOnline:
                 #print(message)
                 if message["running"] is False:
                     return message
-                action = self.agent.act(message)
                 if message["players"][str(message["you"])]["active"]:
+                    action = self.agent.act(message)
                     respond = str(action)
                     respond = f'{{"action": "{respond}"}}'
                     #print(respond, flush=True)
