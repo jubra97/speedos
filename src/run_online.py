@@ -69,6 +69,6 @@ if __name__ == "__main__":
     while True:
         game = asyncio.get_event_loop().run_until_complete(runner.run())
         games += 1
-        if game["running"] and game["players"][str(game["you"])]["active"]:
+        if game["players"][str(game["you"])]["active"]:
             wins += 1
         print("current stats: " + str(wins/games), flush=True)
