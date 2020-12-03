@@ -5,7 +5,6 @@ from itertools import permutations
 from src.utils import Direction, Action, get_state, arg_maxes, state_to_model, model_to_json
 from src.heuristics import heuristics
 import numpy as np
-from pynput import keyboard
 
 
 class SpeedAgent(Agent):
@@ -278,6 +277,8 @@ class NStepSurvivalAgent(SpeedAgent):
 class HumanAgent(SpeedAgent):
 
     def act(self, state):
+        from pynput import keyboard
+
         with keyboard.Events() as events:
             # Block for as much as possible
             input_key = events.get(1000000).key
