@@ -31,7 +31,7 @@ class RunOnline:
         url = "wss://msoll.de/spe_ed?key=" + API_KEY
         self.connection = await websockets.client.connect(url)
         if self.connection.open:
-            print(f"Connection established at {datetime.datetime.now()}")
+            print(f"Connection established at {datetime.datetime.now()}", flush=True)
 
     async def play_game(self):
         while True:
@@ -62,7 +62,7 @@ class RunOnline:
 
 
 if __name__ == "__main__":
-    print("starting")
+    print("starting", flush=True)
     runner = RunOnline()
     games = 0
     wins = 0
