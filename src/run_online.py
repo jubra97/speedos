@@ -46,13 +46,13 @@ class RunOnline:
                 if message["players"][str(message["you"])]["active"]:
                     respond = str(action)
                     respond = f'{{"action": "{respond}"}}'
-                    #print(respond)
+                    #print(respond, flush=True)
                     try:
                         await self.connection.send(respond)
                     except Exception as e:
                         print(e)
             except websockets.exceptions.ConnectionClosed:
-                print("Connection with server closed.")
+                print("Connection with server closed.", flush=True)
                 if self.save:
                     original_games_path = os.path.abspath("..") + "\\res\\recordedGames\\"
                     with open(original_games_path + datetime.datetime.now().strftime("%d-%m-%y__%H-%M") + ".json", "w") \
