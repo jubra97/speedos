@@ -151,34 +151,71 @@ def reachable_cells(model, agent):
     cells = model.cells.copy()
     width, height = model.width, model.height
 
-    init_particles = surrounding_cells(agent.pos, width, height)
-    particles = []
-    for particle in init_particles:
-        if cells[particle[1], particle[0]] == 0:
-            cells[particle[1], particle[0]] = marker
-            particles.append(particle)
-            reachable_cells_counter += 1
+    particles = surrounding_cells(agent.pos, width, height)
 
     while len(particles) != 0:
         new_particles = []
         for particle in particles:
-            surrounding = surrounding_cells(particle, width, height)
-            for cell in surrounding:
-                if cells[cell[1], cell[0]] == 0:
-                    cells[cell[1], cell[0]] = marker
-                    new_particles.append(cell)
-                    reachable_cells_counter += 1
+            if cells[particle[1], particle[0]] == 0:
+                cells[particle[1], particle[0]] = marker
+                new_particles.append(particle)
+                reachable_cells_counter += 1
+                new_particles.extend(surrounding_cells(particle, width, height))
         particles = new_particles
     return reachable_cells_counter, cells
 
 
-def surrounding_cells(position, width, height):
-    cells = []
-    x, y = position
+class EasyParticle:
+
+    def __init__(self, position, agent_id):
+        self.position = position
+        self.agent_id = agent_id
+
+
+def speed_one_voronoi(model):
+    timestamp = model.schedule.steps
+    cells = model.cells
+    width, height = model.width, model.height
+    # (height, width, (id, timestamp))
+    particle_cells = np.zeros((*cells.shape, 2))
+
+    particles = []
+    for agent in model.active_speed_agents:
+        # TODO: Remove cells behind agent (look at direction)
+        particles.extend(surrounding_cells(EasyParticle(agent.pos, agent.unique_id), width, height))
+
+    while len(particles) != 0:
+        timestamp += 1
+        new_particles = []
+        for particle in particles:
+            pos = (particle.position[1], particle.position[0])
+            if cells[pos] == 0:
+                # no obstacle in cells
+                survived = False
+                if particle_cells[pos[0], pos[1], 1] == 0:
+                    # first
+                    particle_cells[pos[0], pos[1]] = [particle.agent_id, timestamp]
+                    survived = True
+                elif particle_cells[pos[0], pos[1], 1] == timestamp and \
+                        particle_cells[pos[0], pos[1], 0] != particle.agent_id:
+                    # battlefront
+                    particle_cells[pos[0], pos[1]] = [-1, -1]
+                    survived = True
+
+                if survived:
+                    new_particles.extend(surrounding_cells(particle, width, height))
+
+        particles = new_particles
+    return particle_cells
+
+
+def surrounding_cells(parent, width, height):
+    particles = []
+    x, y = parent.position
     for d_x, d_y in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
         if 0 <= x + d_x < width and 0 <= y + d_y < height:
-            cells.append((x + d_x, y + d_y))
-    return cells
+            particles.append(EasyParticle((x + d_x, y + d_y), parent.agent_id))
+    return particles
 
 
 class Particle:
