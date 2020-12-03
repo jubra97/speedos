@@ -183,7 +183,7 @@ def surrounding_cells(position, width, height):
 
 class Particle:
 
-    def __init__(self, position, direction, speed, timestamp, path=None, agent_id=-2, battlefront=False):
+    def __init__(self, position, direction, speed, timestamp, path=None, agent_id=-2, battlefront=False, trace=None):
         self.position = position
         self.direction = direction
         self.speed = speed
@@ -191,9 +191,11 @@ class Particle:
         self.path = [] if path is None else path
         self.agent_id = agent_id
         self.battlefront = battlefront
+        self.trace = [] if trace is None else trace
 
 
-def sync_voronoi(model, approximation=True):
+def trace_voronoi(model):
+    voronoi_cells = np.zeros(shape=(*model.cells.shape, model.nb_agents))
     cells = model.cells
     particle_cells = np.empty(cells.shape, dtype=object)
 
@@ -204,7 +206,35 @@ def sync_voronoi(model, approximation=True):
     while len(particles) != 0:
         new_particles = []
         for particle in particles:
-            agent_particles = get_new_particles(cells, particle_cells, particle, approximation)
+            agent_particles = get_new_particles(cells, particle_cells, particle, approximation=True)
+            new_particles.extend(agent_particles)
+            for agent_particle in agent_particles:
+                if voronoi_cells[agent_particle.position[1]][agent_particle.position[0]][agent_particle.agent_id-1] == 0:
+                    voronoi_cells[agent_particle.position[1]][agent_particle.position[0]][agent_particle.agent_id-1] = \
+                        agent_particle.timestamp
+                for pos in agent_particle.trace:
+                    if voronoi_cells[pos[1]][pos[0]][agent_particle.agent_id - 1] == 0:
+                        voronoi_cells[pos[1]][pos[0]][agent_particle.agent_id - 1] = agent_particle.timestamp
+
+        particles = new_particles
+    return voronoi_cells
+
+
+def sync_voronoi(model, approximation=True, track_traces=False):
+    voronoi_cells = None
+    if track_traces:
+        voronoi_cells = trace_voronoi(model)
+    cells = model.cells
+    particle_cells = np.empty(cells.shape, dtype=object)
+
+    particles = []
+    for agent in model.active_speed_agents:
+        particles.append(Particle(agent.pos, agent.direction, agent.speed, model.schedule.steps, [], agent.unique_id))
+
+    while len(particles) != 0:
+        new_particles = []
+        for particle in particles:
+            agent_particles = get_new_particles(cells, particle_cells, particle, approximation, voronoi_cells)
             new_particles.extend(agent_particles)
 
         particles = new_particles
@@ -221,22 +251,28 @@ def voronoi(model, agent, approximation=True):
     while len(particles) != 0:
         new_particles = []
         for particle in particles:
-            new_particles.extend(get_new_particles(cells, particle_cells, particle, approximation))
+            particles = get_new_particles(cells, particle_cells, particle, approximation)
+            new_particles.extend(particles)
 
         particles = new_particles
     return particle_cells
 
 
-def get_new_particles(cells, particle_cells, particle, approximation=True):
+def get_new_particles(cells, particle_cells, particle, approximation=True, voronoi_cells=None):
     new_particles = []
     for action in list(Action):
-        trace, new_particle = get_action_trace(particle, action, cells.shape)
+        new_particle = get_action_trace(particle, action, cells.shape)
 
         if not approximation and new_particle is not None:
-            new_particle.path = particle.path + trace
+            new_particle.path = particle.path + particle.trace
 
         collision = False
-        for t in trace:
+        for t in particle.trace:
+            if voronoi_cells is not None:
+                for agent_id in range(voronoi_cells.shape[2]):
+                    if agent_id+1 != particle.agent_id and particle.timestamp >= voronoi_cells[t[1]][t[0]][agent_id]:
+                        collision = True
+
             if cells[t[1], t[0]] != 0:
                 collision = True
             if not approximation:
@@ -287,8 +323,8 @@ def get_action_trace(particle, action, cells_size):
         speed += 1
 
     # check invalid speed
-    if not 1 <= speed <= 3:
-        return [], None
+    if not 1 <= speed <= 1:
+        return None
 
     # empty the trace
     trace = []
@@ -311,11 +347,11 @@ def get_action_trace(particle, action, cells_size):
         new_pos = (new_x, new_y)
         # check borders and speed
         if out_of_bounds(cells_size, new_pos):
-            return [], None
+            return None
 
         # create trace
         # trace gaps occur every 6 rounds if the speed is higher than 2.
         if timestamp % 6 != 0 or speed < 3 or i == 1 or i == 0:
             trace.append(new_pos)
 
-    return trace, Particle(new_pos, direction, speed, timestamp, agent_id=particle.agent_id)
+    return Particle(new_pos, direction, speed, timestamp, agent_id=particle.agent_id, trace=trace)
