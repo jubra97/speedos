@@ -2,7 +2,6 @@ from src.utils import Action, state_to_model, model_to_json, sync_voronoi, speed
 import numpy as np
 from anytree import Node
 import copy
-import matplotlib.pyplot as plt
 
 
 def multi_minimax(depth, game_state, super_pruning=False, use_voronoi=True):
@@ -143,6 +142,8 @@ def add_territory_bonus(model, x, y):
 
 
 def visualize_voronoi(cells):
+    import matplotlib.pyplot as plt
+
     res = np.zeros((cells.shape[0], cells.shape[1]), dtype=np.int)
     for x in range(cells.shape[0]):
         for y in range(cells.shape[1]):

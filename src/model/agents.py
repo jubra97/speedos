@@ -5,7 +5,6 @@ from itertools import permutations
 from src.utils import Direction, Action, get_state, arg_maxes, state_to_model, model_to_json, speed_one_voronoi
 from src.heuristics import heuristics
 import numpy as np
-import matplotlib.pyplot as plt
 
 
 class SpeedAgent(Agent):

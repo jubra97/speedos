@@ -1,4 +1,3 @@
-import datetime
 import os
 import json
 
@@ -35,7 +34,7 @@ class RunOnline:
         url = "wss://msoll.de/spe_ed?key=" + API_KEY
         self.connection = await websockets.client.connect(url)
         if self.connection.open:
-            print(f"Connection established at {datetime.datetime.now()}", flush=True)
+            print(f"Connection established at {datetime.now()}", flush=True)
 
     async def play_game(self):
         round = 0
@@ -45,9 +44,10 @@ class RunOnline:
                 message = await self.connection.recv()
                 round += 1
                 message = json.loads(message)
-                deadline = datetime.strptime(message["deadline"], '%b %d %Y %I:%M%p')
-                r_time = (deadline - datetime.utcnow()).total_seconds()
-                response_times.append(r_time)
+                if "deadline" in message:
+                    deadline = datetime.strptime(message["deadline"], "%Y-%m-%dT%H:%M:%SZ")
+                    r_time = (deadline - datetime.utcnow()).total_seconds()
+                    response_times.append(r_time)
                 self.history.append(message)
                 #print(message)
                 if message["running"] is False:
@@ -65,7 +65,7 @@ class RunOnline:
                 print("Connection with server closed.", flush=True)
                 if self.save:
                     original_games_path = os.path.abspath("..") + "\\res\\recordedGames\\"
-                    with open(original_games_path + datetime.datetime.now().strftime("%d-%m-%y__%H-%M") + ".json", "w") \
+                    with open(original_games_path + datetime.now().strftime("%d-%m-%y__%H-%M") + ".json", "w") \
                             as f:
                         json.dump(self.history, f, indent=4)
                 break
@@ -77,12 +77,15 @@ def write_result(results_file_path, game_number, game, end_round, avg_r_time):
         if game["players"][str(game["you"])]["active"]:
             win = True
 
-        f.write("{}\t{}\t{}\t{}\n".format(
+        line = "{}\t{}\t{}\t{}\t{}\n".format(
             game_number,
             win,
             avg_r_time,
             "{} x {}".format(game["width"], game["height"]),
-            end_round))
+            end_round)
+
+        print(line, flush=True)
+        f.write(line)
         f.flush()
 
 
@@ -101,5 +104,5 @@ if __name__ == "__main__":
             write_result(results_file_path, games, game, end_round, avg_r_time)
             print("current stats: " + str(wins/games), flush=True)
         except Exception as e:
-            print(e)
+            print(str(e), flush=True)
             sleep(60)
