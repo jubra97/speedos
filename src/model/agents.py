@@ -2,10 +2,11 @@ from mesa import Agent
 from mesa import Model
 from abc import abstractmethod
 from itertools import permutations
-from src.utils import Direction, Action, get_state, arg_maxes, state_to_model, model_to_json
+from src.utils import Direction, Action, get_state, arg_maxes, state_to_model, model_to_json, speed_one_voronoi
 from src.heuristics import heuristics
 import numpy as np
 from pynput import keyboard
+import matplotlib.pyplot as plt
 
 
 class SpeedAgent(Agent):
@@ -298,14 +299,17 @@ class MultiMiniMaxAgent(SpeedAgent):
     """
     Agent that chooses an action based on the multi minimax algorithm
     """
-    def __init__(self, model, pos, direction, speed=1, active=True, base_depth=6):
+    def __init__(self, model, pos, direction, speed=1, active=True, base_depth=2, use_voronoi=True):
         super().__init__(model, pos, direction, speed, active)
         self.base_depth = base_depth
+        self.use_voronoi = use_voronoi
 
     def act(self, state):
         model = state_to_model(state)
-        depth = self.base_depth + model.nb_agents - len(model.active_speed_agents)
-        action = heuristics.multi_minimax(depth, state)
+        depth = self.base_depth
+        # depth = self.base_depth + model.nb_agents - len(model.active_speed_agents)
+        action = heuristics.multi_minimax(depth, state, use_voronoi=self.use_voronoi)
+
         return action
 
 
