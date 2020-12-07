@@ -95,7 +95,7 @@ def write_result(results_file_path, game_number, game, end_round, avg_r_time, pl
 
 if __name__ == "__main__":
     timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H-%M-%SZ")
-    run_dir = f"./run_{timestamp}/data"
+    run_dir = f"./data/run_{timestamp}"
     print("starting", flush=True)
     json_dir = run_dir + "/json_files"
     Path(json_dir).mkdir(parents=True, exist_ok=True)
