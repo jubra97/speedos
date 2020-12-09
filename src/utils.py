@@ -178,7 +178,7 @@ def speed_one_voronoi(model):
     cells = model.cells
     width, height = model.width, model.height
     # (height, width, (id, timestamp))
-    particle_cells = np.zeros((*cells.shape, 2))
+    particle_cells = np.zeros((*cells.shape, 2), dtype=np.int8)
 
     particles = []
     for agent in model.active_speed_agents:
@@ -207,7 +207,7 @@ def speed_one_voronoi(model):
                     new_particles.extend(surrounding_cells(particle, width, height))
 
         particles = new_particles
-    return particle_cells
+    return particle_cells, dict(zip(*np.unique(particle_cells[:, :, 0], return_counts=True)))
 
 
 def surrounding_cells(parent, width, height):

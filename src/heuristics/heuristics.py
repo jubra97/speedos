@@ -111,23 +111,40 @@ def evaluate_position(state, max_player, min_player, depth, use_voronoi):
             return float("inf")
         elif not max_player.active:
             return -1000 * depth
-        max_player_score = 0
-        min_player_score = 0
-        voronoi = speed_one_voronoi(model)
-        for x in range(voronoi.shape[0]):
-            for y in range(voronoi.shape[1]):
-                if voronoi[x, y] is not None:
-                    if voronoi[x, y, 0] == max_player.unique_id:
-                        max_player_score += 1
-                        max_player_score += add_territory_bonus(model, x, y)
-                    elif voronoi[x, y, 0] == min_player.unique_id:
-                        min_player_score += 1
-        return max_player_score - min_player_score
+
+        voronoi_cells, voronoi_counter = speed_one_voronoi(model)
+        nb_cells = float(model.width * model.height)   # for normalization
+
+        # voronoi region size comparison
+        max_player_size = voronoi_counter[max_player.unique_id] if max_player.unique_id in voronoi_counter.keys() else 0
+        min_player_size = voronoi_counter[min_player.unique_id] if min_player.unique_id in voronoi_counter.keys() else 0
+        voronoi_region_points = (max_player_size - min_player_size) / nb_cells
+
+        territory_bonus = 0
+        for x in range(model.width):
+            for y in range(model.height):
+                if voronoi_cells[y, x, 0] == max_player.unique_id:
+                    territory_bonus += add_territory_bonus(model, x, y)
+        territory_bonus /= nb_cells
+
+        return voronoi_region_points + territory_bonus
 
 
 def add_territory_bonus(model, x, y):
-    territory_bonus = 0.2
+    territory_bonus = 0.25
     bonus = 0
+    # TODO: I guess you used try/except to avoid an IndexOutOfBoundsException, but I think that is incorrect.
+    #       For example, non-surrounded cells at the right edge of the field get a bonus of 0 and non-surrounded cells
+    #       at the top edge get a bonus of 0.6. However, all non-surrounded edge cells should get a bonus of 0.6, right?
+    #       + x and y have to be swapped if used in model.cells (in this case only important if the field is
+    #       non-quadratic)
+    #       + I changed the territory_bonus to 0.25 so that all values are exactly in [0, 1]
+    #       Checking for number under- or overflow should work fine.
+    #       Suggestion:
+    # directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+    # for d_x, d_y in directions:
+    #     if 0 <= x + d_x < model.width and 0 <= y + d_y < model.height and model.cells[y + d_y, x + d_x] == 0:
+    #         bonus += territory_bonus
     try:
         if model.cells[x+1, y] == 0:
             bonus += territory_bonus
