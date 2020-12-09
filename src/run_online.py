@@ -4,7 +4,7 @@ import json
 import websockets
 import asyncio
 
-from src.model.agents import RandomAgent, MultiMiniMaxAgent
+from src.model.agents import RandomAgent, MultiMiniMaxAgent, MultiMiniMaxDeadlineAwareAgent
 from src.utils import state_to_model
 from time import sleep
 from datetime import datetime
@@ -117,7 +117,7 @@ if __name__ == "__main__":
     results_file_path = run_dir + "/results.txt"
     log_file_path = run_dir + "/log.txt"
 
-    runner = RunOnline(agent=MultiMiniMaxAgent, save_files_dir=json_dir, log_file_dir=log_file_path)
+    runner = RunOnline(agent=MultiMiniMaxDeadlineAwareAgent, save_files_dir=json_dir, log_file_dir=log_file_path)
     games = 0
     wins = 0
 
