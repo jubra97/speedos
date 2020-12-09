@@ -7,6 +7,7 @@ from src.heuristics import heuristics
 import numpy as np
 from pynput import keyboard
 import matplotlib.pyplot as plt
+import multiprocessing
 
 
 class SpeedAgent(Agent):
@@ -321,14 +322,25 @@ class MultiMiniMaxDeadlineAwareAgent(SpeedAgent):
         super().__init__(model, pos, direction, speed, active)
         self.base_depth = base_depth
         self.use_voronoi = use_voronoi
+        self.super_pruning = False
 
     def act(self, state):
-        model = state_to_model(state)
-        depth = self.base_depth
-        # depth = self.base_depth + model.nb_agents - len(model.active_speed_agents)
-        action = heuristics.multi_minimax_depth_first_iterative_deepening(state, use_voronoi=self.use_voronoi)
+        move = multiprocessing.Value('i', 4)
+        p = multiprocessing.Process(target=heuristics.multi_minimax_depth_first_iterative_deepening, name="DFID",
+                                    args=(move, state, self.super_pruning, self.use_voronoi))
+        p.start()
+        av_time = 10  # TODO: replace by:
+        # deadline = datetime.strptime(state["deadline"], "%Y-%m-%dT%H:%M:%SZ")
+        # av_time = (deadline - datetime.utcnow()).total_seconds() - send_time
+        p.join(av_time)
 
-        return action
+        # If thread is active
+        if p.is_alive():
+            # Terminate foo
+            p.terminate()
+            p.join()
+
+        return move
 
 
 

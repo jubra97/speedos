@@ -8,14 +8,16 @@ end_game_depth = 5
 max_cache_depth = 4
 
 
-def multi_minimax_depth_first_iterative_deepening(game_state, super_pruning=False, use_voronoi=True):
+def multi_minimax_depth_first_iterative_deepening(shared_move_var, game_state, super_pruning=False, use_voronoi=True):
     depth = 1
     move_to_make = Action.CHANGE_NOTHING
     globals()["cache"] = defaultdict(int)
 
+    # TODO: replace by:
+    #  while True:
     while depth < 3:
-        move_to_make = multi_minimax(depth, game_state, super_pruning=super_pruning,
-                                     use_voronoi=use_voronoi)
+        move_to_make = multi_minimax(depth, game_state, super_pruning=super_pruning, use_voronoi=use_voronoi)
+        shared_move_var.value = move_to_make.value
         depth += 1
 
     return move_to_make
