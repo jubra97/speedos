@@ -1,7 +1,7 @@
 from src.utils import Action, state_to_model, model_to_json, sync_voronoi, speed_one_voronoi, hash_state
 import numpy as np
 import copy
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 from collections import defaultdict
 
 end_game_depth = 5
