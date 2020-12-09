@@ -167,9 +167,10 @@ def reachable_cells(model, agent):
 
 class EasyParticle:
 
-    def __init__(self, position, agent_id):
+    def __init__(self, position, agent_id, direction):
         self.position = position
         self.agent_id = agent_id
+        self.direction = direction
 
 
 def speed_one_voronoi(model):
@@ -181,8 +182,8 @@ def speed_one_voronoi(model):
 
     particles = []
     for agent in model.active_speed_agents:
-        # TODO: Remove cells behind agent (look at direction)
-        particles.extend(surrounding_cells(EasyParticle(agent.pos, agent.unique_id), width, height))
+        particle = EasyParticle(agent.pos, agent.unique_id, agent.direction)
+        particles.extend(surrounding_cells(particle, width, height))
 
     while len(particles) != 0:
         timestamp += 1
@@ -191,16 +192,16 @@ def speed_one_voronoi(model):
             pos = (particle.position[1], particle.position[0])
             if cells[pos] == 0:
                 # no obstacle in cells
-                survived = False
+                survived = True
                 if particle_cells[pos[0], pos[1], 1] == 0:
                     # first
                     particle_cells[pos[0], pos[1]] = [particle.agent_id, timestamp]
-                    survived = True
                 elif particle_cells[pos[0], pos[1], 1] == timestamp and \
                         particle_cells[pos[0], pos[1], 0] != particle.agent_id:
                     # battlefront
                     particle_cells[pos[0], pos[1]] = [-1, -1]
-                    survived = True
+                else:
+                    survived = False
 
                 if survived:
                     new_particles.extend(surrounding_cells(particle, width, height))
@@ -212,9 +213,22 @@ def speed_one_voronoi(model):
 def surrounding_cells(parent, width, height):
     particles = []
     x, y = parent.position
-    for d_x, d_y in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+    directions = [(-1, 0, Direction.LEFT), (1, 0, Direction.RIGHT), (0, -1, Direction.UP), (0, 1, Direction.DOWN)]
+
+    # remove direction behind agent
+    if parent.direction == Direction.UP:
+        directions.remove((0, 1, Direction.DOWN))
+    elif parent.direction == Direction.DOWN:
+        directions.remove((0, -1, Direction.UP))
+    elif parent.direction == Direction.RIGHT:
+        directions.remove((-1, 0, Direction.LEFT))
+    elif parent.direction == Direction.LEFT:
+        directions.remove((1, 0, Direction.RIGHT))
+
+    for d_x, d_y, direction in directions:
         if 0 <= x + d_x < width and 0 <= y + d_y < height:
-            particles.append(EasyParticle((x + d_x, y + d_y), parent.agent_id))
+            particles.append(EasyParticle((x + d_x, y + d_y), parent.agent_id, direction))
+
     return particles
 
 
