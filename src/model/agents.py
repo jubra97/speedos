@@ -276,7 +276,7 @@ class NStepSurvivalAgent(SpeedAgent):
                 for idx, agent in enumerate(model.active_speed_agents):
                     agent.action = action_permutation[idx]
                 model.step()
-                new_state = get_state(model, own_agent)
+                new_state = get_state(model, own_agent, self.deadline)
                 # recursion
                 if initial_action is None:
                     self.deep_search(new_state, depth - 1, own_agent.action)
