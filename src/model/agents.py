@@ -350,7 +350,6 @@ class MultiMiniMaxDeadlineAwareAgent(SpeedAgent):
             p.terminate()
             p.join()
 
-        print(dep.value)
         return Action(move.value)
 
 
