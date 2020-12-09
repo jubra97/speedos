@@ -1,14 +1,29 @@
-from src.utils import Action, state_to_model, model_to_json, sync_voronoi, speed_one_voronoi
+from src.utils import Action, state_to_model, model_to_json, sync_voronoi, speed_one_voronoi, hash_state
 import numpy as np
-from anytree import Node
 import copy
+import matplotlib.pyplot as plt
+from collections import defaultdict
+
+end_game_depth = 5
+max_cache_depth = 4
+
+
+def multi_minimax_depth_first_iterative_deepening(shared_move_var, game_state, super_pruning=False, use_voronoi=True):
+    depth = 1
+    globals()["cache"] = dict() #defaultdict(int)
+
+    while True:  # canceled from outside
+        move_to_make = multi_minimax(depth, game_state, super_pruning=super_pruning, use_voronoi=use_voronoi)
+        shared_move_var.value = move_to_make.value
+        depth += 1
 
 
 def multi_minimax(depth, game_state, super_pruning=False, use_voronoi=True):
+    max_depth = depth
     pruning_threshold = -1
     model = state_to_model(game_state)
     own_id = game_state["you"]
-    start_node = Node(str(own_id))
+    _, _, is_endgame = speed_one_voronoi(model, own_id)
     max_player = model.get_agent_by_id(own_id)
     min_player_ids = list(map(lambda a: a.unique_id, model.active_speed_agents))
     min_player_ids.remove(own_id)
@@ -20,21 +35,22 @@ def multi_minimax(depth, game_state, super_pruning=False, use_voronoi=True):
     for action in reversed(copy_actions):
         pre_state = model_to_json(model, trace_aware=True)
         update_game_state(model, max_player, action)
-        node = Node(str(min_player_ids), parent=start_node)
+        tree_path = str(action.value)
         min_move = float("inf")
         beta = float("inf")
         for opponent_id in min_player_ids:
             opponent = model.get_agent_by_id(opponent_id)
 
-            min_move = min(min_move, minimax(max_player, opponent, depth-1, alpha, beta, False, model, node, use_voronoi))
-            # for pre, fill, node in RenderTree(start_node):
-            #     print("%s%s" % (pre, node.name))
+            min_move = min(min_move, minimax(max_player, opponent, depth-1, max_depth, alpha, beta, False, model,
+                                             use_voronoi, is_endgame, tree_path=tree_path))
 
             model = state_to_model(pre_state, trace_aware=True)
             max_player = model.get_agent_by_id(own_id)
             beta = min_move
 
             if alpha >= beta:
+                break
+            if is_endgame:
                 break
 
         if super_pruning and action == Action.CHANGE_NOTHING and min_move > pruning_threshold:
@@ -55,19 +71,21 @@ def update_game_state(model, agent, action):
     model.step_specific_agent(agent)
 
 
-def minimax(max_player, min_player, depth, alpha, beta, is_max, model, last_parent_node, use_voronoi):
+def minimax(max_player, min_player, depth, max_depth, alpha, beta, is_max, model, use_voronoi, is_endgame, tree_path=None):
     if depth == 0 or not max_player.active or not model.running:
-        return evaluate_position(model_to_json(model, trace_aware=True), max_player, min_player, depth, use_voronoi)
-    if is_max:
+        return evaluate_position(model_to_json(model, trace_aware=True), max_player, min_player, depth, max_depth,
+                                 use_voronoi, tree_path=tree_path)
+    if is_max or is_endgame:
         max_move = float("-inf")
         pre_state = model_to_json(model, trace_aware=True)
         for action in list(Action):
             update_game_state(model, max_player, action)
-            node = Node(str(min_player.unique_id), parent=last_parent_node)
+            tree_path += str(action.value)
 
-            max_move = max(max_move, minimax(max_player, min_player, depth-1, alpha, beta, False, model, node, use_voronoi))
+            max_move = max(max_move, minimax(max_player, min_player, depth-1, max_depth, alpha, beta, False, model,
+                                             use_voronoi, is_endgame, tree_path=tree_path))
 
-            model = state_to_model(pre_state)
+            model = state_to_model(pre_state, trace_aware=True)
             own_id = max_player.unique_id
             max_player = model.get_agent_by_id(own_id)
             min_player_id = min_player.unique_id
@@ -82,9 +100,10 @@ def minimax(max_player, min_player, depth, alpha, beta, is_max, model, last_pare
         pre_state = model_to_json(model, trace_aware=True)
         for action in list(Action):
             update_game_state(model, min_player, action)
-            node = Node(str(max_player.unique_id), parent=last_parent_node)
+            tree_path += str(action.value)
 
-            min_move = min(min_move, minimax(max_player, min_player, depth-1, alpha, beta, True, model, node, use_voronoi))
+            min_move = min(min_move, minimax(max_player, min_player, depth-1, max_depth, alpha, beta, True, model,
+                                             use_voronoi, is_endgame, tree_path=tree_path))
 
             model = state_to_model(pre_state, trace_aware=True)
             own_id = max_player.unique_id
@@ -98,46 +117,79 @@ def minimax(max_player, min_player, depth, alpha, beta, is_max, model, last_pare
         return min_move
 
 
-def evaluate_position(state, max_player, min_player, depth, use_voronoi):
+def evaluate_position(state, max_player, min_player, depth, max_depth, use_voronoi, tree_path=None, caching_enabled=False):
+    # use cached value
+    print("evaluate " + tree_path)
+    if caching_enabled and globals()["cache"] is not None:
+        cache_key = tree_path #hash_state(state)
+        if cache_key in globals()["cache"]:
+            print("found cached " + tree_path)
+            return globals()["cache"][cache_key]
+
     if not use_voronoi:
         if max_player.active and not min_player.active:
             return float("inf")
         else:
             return -1 * depth
     else:
-        model = state_to_model(state)
+        # weights - all non-weighted evaluation values should be in [-1, 1]
+        # using very large weight gaps is effectively like prioritization
+        kill_weight = float("inf")
+        death_weight = 1000
+        voronoi_region_weight = 1
+        territory_bonus_weight = 0.001  # only used to decide between positions with equal voronoi region evaluation
+
+        model = state_to_model(state, trace_aware=True)
         if max_player.active and not min_player.active:
-            return float("inf")
+            # TODO: Maybe it is non-optimal to kill an opponent in a 1vx situation (its optimal in 1v1).
+            #       It also makes a difference which opponent is killed if multiple opponents can be killed in a 1vx
+            #       (e.g. kill the one with a larger voronoi region)
+            utility = kill_weight
+            if caching_enabled and depth < max_cache_depth and globals()["cache"] is not None:
+                globals()["cache"][cache_key] = utility  # cache result
+            return utility
         elif not max_player.active:
-            return -1000 * depth
-        max_player_score = 0
-        min_player_score = 0
-        voronoi = speed_one_voronoi(model)
-        for x in range(voronoi.shape[0]):
-            for y in range(voronoi.shape[1]):
-                if voronoi[x, y] is not None:
-                    if voronoi[x, y, 0] == max_player.unique_id:
-                        max_player_score += 1
-                        max_player_score += add_territory_bonus(model, x, y)
-                    elif voronoi[x, y, 0] == min_player.unique_id:
-                        min_player_score += 1
-        return max_player_score - min_player_score
+            # TODO: Detect situations where the game is lost if we try to survive but we can force a kamikaze draw.
+            #       At the moment the agent would always try to survive one more step and would only kamikaze if death
+            #       is inevitable.
+            death_eval = -depth
+            if not min_player.active:
+                # kamikaze is better than just dying without killing someone else
+                death_eval += 0.1
+            utility = death_eval / max_depth * death_weight
+            if caching_enabled and depth < max_cache_depth and globals()["cache"] is not None:
+                globals()["cache"][cache_key] = utility  # cache result
+            return utility
+
+        voronoi_cells, voronoi_counter, is_endgame = speed_one_voronoi(model, max_player.unique_id)
+        nb_cells = float(model.width * model.height)   # for normalization
+
+        # voronoi region size comparison
+        max_player_size = voronoi_counter[max_player.unique_id] if max_player.unique_id in voronoi_counter.keys() else 0
+        min_player_size = voronoi_counter[min_player.unique_id] if min_player.unique_id in voronoi_counter.keys() else 0
+        voronoi_region_points = (max_player_size - min_player_size) / nb_cells * voronoi_region_weight
+
+        territory_bonus = 0
+        for x in range(model.width):
+            for y in range(model.height):
+                if voronoi_cells[y, x, 0] == max_player.unique_id:
+                    territory_bonus += add_territory_bonus(model, x, y)
+        territory_bonus *= territory_bonus_weight / nb_cells
+
+        utility = voronoi_region_points + territory_bonus
+        if caching_enabled and depth < max_cache_depth and globals()["cache"] is not None:
+            globals()["cache"][cache_key] = utility  # cache result
+        return utility
 
 
 def add_territory_bonus(model, x, y):
-    territory_bonus = 0.2
+    territory_bonus = 0.25
     bonus = 0
-    try:
-        if model.cells[x+1, y] == 0:
+    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+    for d_x, d_y in directions:
+        if 0 <= x + d_x < model.width and 0 <= y + d_y < model.height and model.cells[y + d_y, x + d_x] == 0:
             bonus += territory_bonus
-        if model.cells[x, y+1] == 0:
-            bonus += territory_bonus
-        if model.cells[x-1, y] == 0:
-            bonus += territory_bonus
-        if model.cells[x, y-1] == 0:
-            bonus += territory_bonus
-    except:
-        pass
+
     return bonus
 
 
