@@ -2,10 +2,12 @@ from mesa import Agent
 from mesa import Model
 from abc import abstractmethod
 from itertools import permutations
-from src.utils import Direction, Action, get_state, arg_maxes, state_to_model, model_to_json
+from src.utils import Direction, Action, get_state, arg_maxes, state_to_model
 from src.heuristics import heuristics
 import numpy as np
 from pynput import keyboard
+import datetime
+import random
 
 
 class SpeedAgent(Agent):
@@ -31,6 +33,7 @@ class SpeedAgent(Agent):
         self.direction = direction
         self.speed = speed
         self.active = active
+        self.deadline = None
         # Holds all cells that were visited in the last step
         if trace is None:
             self.trace = []
@@ -56,8 +59,15 @@ class SpeedAgent(Agent):
         if not self.active:
             return
 
-        state = get_state(self.model, self)
+        # set deadline in agent because every agent has 10 seconds of time.
+        acceptable_computing_time = datetime.timedelta(seconds=9.8 + random.uniform(-0.3, 0.3))
+        self.deadline = datetime.datetime.now() + acceptable_computing_time
+
+        state = get_state(self.model, self, self.deadline)
         self.action = self.act(state)
+        if datetime.datetime.now() > self.deadline:
+            print(f"Agent {self} exceeded Deadline by {datetime.datetime.now() - self.deadline}!")
+            self.set_inactive()
 
     def advance(self):
         """

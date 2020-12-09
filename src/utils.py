@@ -53,9 +53,12 @@ def model_to_json(model, trace_aware=False):
     }
 
 
-def get_state(model, agent):
+def get_state(model, agent, deadline):
     state = model_to_json(model)
     state["you"] = agent.unique_id
+    if deadline is None:
+        print("Warning: No deadline used")
+    state["deadline"] = deadline
     return state
 
 
