@@ -1,9 +1,24 @@
-from src.utils import Action, state_to_model, model_to_json, sync_voronoi, speed_one_voronoi
+from src.utils import Action, state_to_model, model_to_json, sync_voronoi, speed_one_voronoi, hash_state
 import numpy as np
 import copy
 import matplotlib.pyplot as plt
+from collections import defaultdict
 
 end_game_depth = 5
+max_cache_depth = 4
+
+
+def multi_minimax_depth_first_iterative_deepening(game_state, super_pruning=False, use_voronoi=True):
+    depth = 1
+    move_to_make = Action.CHANGE_NOTHING
+    globals()["cache"] = defaultdict(int)
+
+    while depth < 3:
+        move_to_make = multi_minimax(depth, game_state, super_pruning=super_pruning,
+                                     use_voronoi=use_voronoi)
+        depth += 1
+
+    return move_to_make
 
 
 def multi_minimax(depth, game_state, super_pruning=False, use_voronoi=True):
@@ -103,6 +118,12 @@ def minimax(max_player, min_player, depth, max_depth, alpha, beta, is_max, model
 
 
 def evaluate_position(state, max_player, min_player, depth, max_depth, use_voronoi):
+    # use cached value
+    if globals()["cache"] is not None:
+        cache_key = hash_state(state)
+        if cache_key in globals()["cache"]:
+            return globals()["cache"][cache_key]
+
     if not use_voronoi:
         if max_player.active and not min_player.active:
             return float("inf")
@@ -121,7 +142,10 @@ def evaluate_position(state, max_player, min_player, depth, max_depth, use_voron
             # TODO: Maybe it is non-optimal to kill an opponent in a 1vx situation (its optimal in 1v1).
             #       It also makes a difference which opponent is killed if multiple opponents can be killed in a 1vx
             #       (e.g. kill the one with a larger voronoi region)
-            return kill_weight
+            utility = kill_weight
+            if depth < max_cache_depth and globals()["cache"] is not None:
+                globals()["cache"][cache_key] = utility  # cache result
+            return utility
         elif not max_player.active:
             # TODO: Detect situations where the game is lost if we try to survive but we can force a kamikaze draw.
             #       At the moment the agent would always try to survive one more step and would only kamikaze if death
@@ -130,7 +154,10 @@ def evaluate_position(state, max_player, min_player, depth, max_depth, use_voron
             if not min_player.active:
                 # kamikaze is better than just dying without killing someone else
                 death_eval += 0.1
-            return death_eval / max_depth * death_weight
+            utility = death_eval / max_depth * death_weight
+            if depth < max_cache_depth and globals()["cache"] is not None:
+                globals()["cache"][cache_key] = utility  # cache result
+            return utility
 
         voronoi_cells, voronoi_counter, is_endgame = speed_one_voronoi(model, max_player.unique_id)
         nb_cells = float(model.width * model.height)   # for normalization
@@ -147,7 +174,10 @@ def evaluate_position(state, max_player, min_player, depth, max_depth, use_voron
                     territory_bonus += add_territory_bonus(model, x, y)
         territory_bonus *= territory_bonus_weight / nb_cells
 
-        return voronoi_region_points + territory_bonus
+        utility = voronoi_region_points + territory_bonus
+        if depth < max_cache_depth and globals()["cache"] is not None:
+            globals()["cache"][cache_key] = utility  # cache result
+        return utility
 
 
 def add_territory_bonus(model, x, y):

@@ -313,3 +313,22 @@ class MultiMiniMaxAgent(SpeedAgent):
         return action
 
 
+class MultiMiniMaxDeadlineAwareAgent(SpeedAgent):
+    """
+    Agent that chooses an action based on the multi minimax algorithm before deadline
+    """
+    def __init__(self, model, pos, direction, speed=1, active=True, base_depth=2, use_voronoi=True):
+        super().__init__(model, pos, direction, speed, active)
+        self.base_depth = base_depth
+        self.use_voronoi = use_voronoi
+
+    def act(self, state):
+        model = state_to_model(state)
+        depth = self.base_depth
+        # depth = self.base_depth + model.nb_agents - len(model.active_speed_agents)
+        action = heuristics.multi_minimax_depth_first_iterative_deepening(state, use_voronoi=self.use_voronoi)
+
+        return action
+
+
+
