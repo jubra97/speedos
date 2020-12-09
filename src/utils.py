@@ -173,7 +173,8 @@ class EasyParticle:
         self.direction = direction
 
 
-def speed_one_voronoi(model):
+def speed_one_voronoi(model, max_agent_id):
+    is_endgame = True
     timestamp = model.schedule.steps
     cells = model.cells
     width, height = model.width, model.height
@@ -202,12 +203,15 @@ def speed_one_voronoi(model):
                     particle_cells[pos[0], pos[1]] = [-1, -1]
                 else:
                     survived = False
-
+                # Check for endgame here
+                if particle_cells[pos[0], pos[1], 1] != 0 and bool(particle.agent_id == max_agent_id) ^ \
+                        bool(particle_cells[pos[0], pos[1], 0] == max_agent_id):
+                    is_endgame = False
                 if survived:
                     new_particles.extend(surrounding_cells(particle, width, height))
 
         particles = new_particles
-    return particle_cells, dict(zip(*np.unique(particle_cells[:, :, 0], return_counts=True)))
+    return particle_cells, dict(zip(*np.unique(particle_cells[:, :, 0], return_counts=True))), is_endgame
 
 
 def surrounding_cells(parent, width, height):
