@@ -64,12 +64,12 @@ class SpeedAgent(Agent):
 
         # set deadline in agent because every agent has 10 seconds of time.
         acceptable_computing_time = datetime.timedelta(seconds=9.8 + random.uniform(-0.3, 0.3))
-        self.deadline = datetime.datetime.now() + acceptable_computing_time
+        self.deadline = datetime.datetime.utcnow() + acceptable_computing_time
 
         state = get_state(self.model, self, self.deadline)
         self.action = self.act(state)
-        if datetime.datetime.now() > self.deadline:
-            print(f"Agent {self} exceeded Deadline by {datetime.datetime.now() - self.deadline}!")
+        if datetime.datetime.utcnow() > self.deadline:
+            print(f"Agent {self} exceeded Deadline by {datetime.datetime.utcnow() - self.deadline}!")
             self.set_inactive()
 
     def advance(self):
@@ -317,7 +317,6 @@ class MultiMiniMaxAgent(SpeedAgent):
         self.use_voronoi = use_voronoi
 
     def act(self, state):
-        model = state_to_model(state)
         depth = self.base_depth
         # depth = self.base_depth + model.nb_agents - len(model.active_speed_agents)
         action = heuristics.multi_minimax(depth, state, use_voronoi=self.use_voronoi)
@@ -340,9 +339,9 @@ class MultiMiniMaxDeadlineAwareAgent(SpeedAgent):
         p = multiprocessing.Process(target=heuristics.multi_minimax_depth_first_iterative_deepening, name="DFID",
                                     args=(move, state, self.super_pruning, self.use_voronoi))
         p.start()
-        av_time = 10  # TODO: replace by:
-        # deadline = datetime.strptime(state["deadline"], "%Y-%m-%dT%H:%M:%SZ")
-        # av_time = (deadline - datetime.utcnow()).total_seconds() - send_time
+        send_time = 3
+        deadline = datetime.datetime.strptime(state["deadline"], "%Y-%m-%dT%H:%M:%SZ")
+        av_time = (deadline - datetime.datetime.utcnow()).total_seconds() - send_time
         p.join(av_time)
 
         # If thread is active
@@ -351,7 +350,8 @@ class MultiMiniMaxDeadlineAwareAgent(SpeedAgent):
             p.terminate()
             p.join()
 
-        return move
+        print(dep.value)
+        return Action(move.value)
 
 
 

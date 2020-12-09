@@ -66,7 +66,7 @@ def get_state(model, agent, deadline):
     state["you"] = agent.unique_id
     if deadline is None:
         print("Warning: No deadline used")
-    state["deadline"] = deadline
+    state["deadline"] = deadline.strftime("%Y-%m-%dT%H:%M:%SZ")
     return state
 
 
