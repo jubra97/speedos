@@ -61,12 +61,12 @@ class SpeedAgent(Agent):
 
         # set deadline in agent because every agent has 10 seconds of time.
         acceptable_computing_time = datetime.timedelta(seconds=9.8 + random.uniform(-0.3, 0.3))
-        self.deadline = datetime.datetime.now() + acceptable_computing_time
+        self.deadline = datetime.datetime.utcnow() + acceptable_computing_time
 
         state = get_state(self.model, self, self.deadline)
         self.action = self.act(state)
-        if datetime.datetime.now() > self.deadline:
-            print(f"Agent {self} exceeded Deadline by {datetime.datetime.now() - self.deadline}!")
+        if datetime.datetime.utcnow() > self.deadline:
+            print(f"Agent {self} exceeded Deadline by {datetime.datetime.utcnow() - self.deadline}!")
             self.set_inactive()
 
     def advance(self):
