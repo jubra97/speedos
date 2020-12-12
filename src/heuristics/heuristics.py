@@ -3,8 +3,6 @@ import numpy as np
 import copy
 import matplotlib.pyplot as plt
 
-end_game_depth = 5
-
 
 def multi_minimax(depth, game_state, super_pruning=False, use_voronoi=True):
     max_depth = depth
@@ -60,7 +58,7 @@ def update_game_state(model, agent, action):
 
 def minimax(max_player, min_player, depth, max_depth, alpha, beta, is_max, model, use_voronoi, is_endgame):
     if depth == 0 or not max_player.active or not model.running:
-        return evaluate_position(model_to_json(model, trace_aware=True), max_player, min_player, depth, max_depth,
+        return evaluate_position(model, max_player, min_player, depth, max_depth,
                                  use_voronoi)
     if is_max or is_endgame:
         max_move = float("-inf")
@@ -102,7 +100,7 @@ def minimax(max_player, min_player, depth, max_depth, alpha, beta, is_max, model
         return min_move
 
 
-def evaluate_position(state, max_player, min_player, depth, max_depth, use_voronoi):
+def evaluate_position(model, max_player, min_player, depth, max_depth, use_voronoi):
     if not use_voronoi:
         if max_player.active and not min_player.active:
             return float("inf")
@@ -116,11 +114,9 @@ def evaluate_position(state, max_player, min_player, depth, max_depth, use_voron
         voronoi_region_weight = 1
         territory_bonus_weight = 0.001  # only used to decide between positions with equal voronoi region evaluation
 
-        model = state_to_model(state, trace_aware=True)
+        # TODO: Bonus points for adjacent battlezones
+
         if max_player.active and not min_player.active:
-            # TODO: Maybe it is non-optimal to kill an opponent in a 1vx situation (its optimal in 1v1).
-            #       It also makes a difference which opponent is killed if multiple opponents can be killed in a 1vx
-            #       (e.g. kill the one with a larger voronoi region)
             return kill_weight
         elif not max_player.active:
             # TODO: Detect situations where the game is lost if we try to survive but we can force a kamikaze draw.
