@@ -7,13 +7,14 @@ from collections import defaultdict
 max_cache_depth = 4
 
 
-def multi_minimax_depth_first_iterative_deepening(shared_move_var, game_state, super_pruning=False, use_voronoi=True):
+def multi_minimax_depth_first_iterative_deepening(shared_move_var, shared_dep, game_state, super_pruning=False, use_voronoi=True):
     depth = 1
     globals()["cache"] = dict() #defaultdict(int)
 
     while True:  # canceled from outside
         move_to_make = multi_minimax(depth, game_state, super_pruning=super_pruning, use_voronoi=use_voronoi)
         shared_move_var.value = move_to_make.value
+        shared_dep.value = depth
         depth += 1
 
 
