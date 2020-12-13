@@ -232,13 +232,13 @@ def surrounding_cells(parent, width, height):
 
     # remove direction behind agent
     if parent.direction == Direction.UP:
-        directions.remove((0, 1, Direction.DOWN))
+        directions.pop(3)
     elif parent.direction == Direction.DOWN:
-        directions.remove((0, -1, Direction.UP))
+        directions.pop(2)
     elif parent.direction == Direction.RIGHT:
-        directions.remove((-1, 0, Direction.LEFT))
+        directions.pop(0)
     elif parent.direction == Direction.LEFT:
-        directions.remove((1, 0, Direction.RIGHT))
+        directions.pop(1)
 
     for d_x, d_y, direction in directions:
         if 0 <= x + d_x < width and 0 <= y + d_y < height:

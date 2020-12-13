@@ -4,7 +4,6 @@ import copy
 #import matplotlib.pyplot as plt
 from collections import defaultdict
 
-end_game_depth = 5
 max_cache_depth = 4
 
 
@@ -73,7 +72,7 @@ def update_game_state(model, agent, action):
 
 def minimax(max_player, min_player, depth, max_depth, alpha, beta, is_max, model, use_voronoi, is_endgame, tree_path=None):
     if depth == 0 or not max_player.active or not model.running:
-        return evaluate_position(model_to_json(model, trace_aware=True), max_player, min_player, depth, max_depth,
+        return evaluate_position(model, max_player, min_player, depth, max_depth,
                                  use_voronoi, tree_path=tree_path)
     if is_max or is_endgame:
         max_move = float("-inf")
@@ -117,7 +116,7 @@ def minimax(max_player, min_player, depth, max_depth, alpha, beta, is_max, model
         return min_move
 
 
-def evaluate_position(state, max_player, min_player, depth, max_depth, use_voronoi, tree_path=None, caching_enabled=False):
+def evaluate_position(model, max_player, min_player, depth, max_depth, use_voronoi, tree_path=None, caching_enabled=False):
     # use cached value
     print("evaluate " + tree_path)
     if caching_enabled and globals()["cache"] is not None:
@@ -139,11 +138,9 @@ def evaluate_position(state, max_player, min_player, depth, max_depth, use_voron
         voronoi_region_weight = 1
         territory_bonus_weight = 0.001  # only used to decide between positions with equal voronoi region evaluation
 
-        model = state_to_model(state, trace_aware=True)
+        # TODO: Bonus points for adjacent battlezones
+
         if max_player.active and not min_player.active:
-            # TODO: Maybe it is non-optimal to kill an opponent in a 1vx situation (its optimal in 1v1).
-            #       It also makes a difference which opponent is killed if multiple opponents can be killed in a 1vx
-            #       (e.g. kill the one with a larger voronoi region)
             utility = kill_weight
             if caching_enabled and depth < max_cache_depth and globals()["cache"] is not None:
                 globals()["cache"][cache_key] = utility  # cache result
