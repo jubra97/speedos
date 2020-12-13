@@ -353,6 +353,7 @@ class MultiMiniMaxDeadlineAwareAgent(SpeedAgent):
             p.terminate()
             p.join()
 
+        print(f"reached_depth: {reached_depth.value}")
         return Action(move.value)
 
 

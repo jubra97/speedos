@@ -119,11 +119,11 @@ def minimax(max_player, min_player, depth, max_depth, alpha, beta, is_max, model
 
 def evaluate_position(model, max_player, min_player, depth, max_depth, use_voronoi, tree_path=None, caching_enabled=False):
     # use cached value
-    print("evaluate " + tree_path)
+    #print("evaluate " + tree_path)
     if caching_enabled and globals()["cache"] is not None:
         cache_key = tree_path #hash_state(state)
         if cache_key in globals()["cache"]:
-            print("found cached " + tree_path)
+            #print("found cached " + tree_path)
             return globals()["cache"][cache_key]
 
     if not use_voronoi:
