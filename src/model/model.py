@@ -36,6 +36,8 @@ class SpeedModel(Model):
             self.history = []
         if initial_agents_params is None:
             initial_agents_params = [{} for i in range(nb_agents)]
+        else:
+            initial_agents_params = copy.deepcopy(initial_agents_params)
 
         self.schedule = SimultaneousActivation(self)
 
