@@ -2,6 +2,7 @@ import copy
 from enum import Enum
 import numpy as np
 import json
+import hashlib
 
 
 class Direction(Enum):
@@ -23,6 +24,13 @@ class Action(Enum):
 
     def __str__(self):
         return self.name.lower()
+
+
+def hash_state(state):
+    val = ""
+    for l in state["cells"]:
+        val += "".join(map(str, l))
+    return int(hashlib.sha1(val.encode("utf-8")).hexdigest(), 16) % (10 ** 8)
 
 
 def agent_to_json(agent, trace_aware=False):
@@ -53,9 +61,12 @@ def model_to_json(model, trace_aware=False):
     }
 
 
-def get_state(model, agent):
+def get_state(model, agent, deadline):
     state = model_to_json(model)
     state["you"] = agent.unique_id
+    if deadline is None:
+        print("Warning: No deadline used")
+    state["deadline"] = deadline.strftime("%Y-%m-%dT%H:%M:%SZ")
     return state
 
 

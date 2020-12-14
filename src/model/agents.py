@@ -3,10 +3,15 @@ from mesa import Model
 from abc import abstractmethod
 from itertools import permutations
 from src.utils import Direction, Action, get_state, arg_maxes, state_to_model, model_to_json, speed_one_voronoi
+from src.utils import Direction, Action, get_state, arg_maxes, state_to_model
 from src.heuristics import heuristics
 import numpy as np
 from pynput import keyboard
 import matplotlib.pyplot as plt
+import multiprocessing
+import datetime
+import random
+import requests
 
 
 class SpeedAgent(Agent):
@@ -32,6 +37,7 @@ class SpeedAgent(Agent):
         self.direction = direction
         self.speed = speed
         self.active = active
+        self.deadline = None
         # Holds all cells that were visited in the last step
         if trace is None:
             self.trace = []
@@ -57,8 +63,15 @@ class SpeedAgent(Agent):
         if not self.active:
             return
 
-        state = get_state(self.model, self)
+        # set deadline in agent because every agent has 10 seconds of time.
+        acceptable_computing_time = datetime.timedelta(seconds=9.8 + random.uniform(-0.3, 0.3))
+        self.deadline = datetime.datetime.utcnow() + acceptable_computing_time
+
+        state = get_state(self.model, self, self.deadline)
         self.action = self.act(state)
+        if datetime.datetime.utcnow() > self.deadline:
+            print(f"Agent {self} exceeded Deadline by {datetime.datetime.utcnow() - self.deadline}!")
+            self.set_inactive()
 
     def advance(self):
         """
@@ -267,7 +280,7 @@ class NStepSurvivalAgent(SpeedAgent):
                 for idx, agent in enumerate(model.active_speed_agents):
                     agent.action = action_permutation[idx]
                 model.step()
-                new_state = get_state(model, own_agent)
+                new_state = get_state(model, own_agent, self.deadline)
                 # recursion
                 if initial_action is None:
                     self.deep_search(new_state, depth - 1, own_agent.action)
@@ -305,11 +318,42 @@ class MultiMiniMaxAgent(SpeedAgent):
         self.use_voronoi = use_voronoi
 
     def act(self, state):
-        model = state_to_model(state)
         depth = self.base_depth
         # depth = self.base_depth + model.nb_agents - len(model.active_speed_agents)
         action = heuristics.multi_minimax(depth, state, use_voronoi=self.use_voronoi)
 
         return action
+
+
+class MultiMiniMaxDeadlineAwareAgent(SpeedAgent):
+    """
+    Agent that chooses an action based on the multi minimax algorithm before deadline
+    """
+    def __init__(self, model, pos, direction, speed=1, active=True, base_depth=2, use_voronoi=True):
+        super().__init__(model, pos, direction, speed, active)
+        self.base_depth = base_depth
+        self.use_voronoi = use_voronoi
+        self.super_pruning = False
+
+    def act(self, state):
+        move = multiprocessing.Value('i', 4)
+        p = multiprocessing.Process(target=heuristics.multi_minimax_depth_first_iterative_deepening, name="DFID",
+                                    args=(move, state, self.super_pruning, self.use_voronoi))
+        p.start()
+        send_time = 3
+        deadline = datetime.datetime.strptime(state["deadline"], "%Y-%m-%dT%H:%M:%SZ")
+        response = requests.get("https://msoll.de/spe_ed_time")
+        server_time = datetime.datetime.strptime(response.json()["time"], "%Y-%m-%dT%H:%M:%SZ")
+        av_time = (deadline - server_time).total_seconds() - send_time
+        p.join(av_time)
+
+        # If thread is active
+        if p.is_alive():
+            # Terminate foo
+            p.terminate()
+            p.join()
+
+        return Action(move.value)
+
 
 
