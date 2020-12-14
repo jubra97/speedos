@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import multiprocessing
 import datetime
 import random
+import requests
 
 
 class SpeedAgent(Agent):
@@ -341,7 +342,9 @@ class MultiMiniMaxDeadlineAwareAgent(SpeedAgent):
         p.start()
         send_time = 3
         deadline = datetime.datetime.strptime(state["deadline"], "%Y-%m-%dT%H:%M:%SZ")
-        av_time = (deadline - datetime.datetime.utcnow()).total_seconds() - send_time
+        response = requests.get("https://msoll.de/spe_ed_time")
+        server_time = datetime.datetime.strptime(response.json()["time"], "%Y-%m-%dT%H:%M:%SZ")
+        av_time = (deadline - server_time).total_seconds() - send_time
         p.join(av_time)
 
         # If thread is active
