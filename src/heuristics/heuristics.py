@@ -149,7 +149,7 @@ def evaluate_position(model, max_player, min_player, depth, max_depth, use_voron
             # TODO: Detect situations where the game is lost if we try to survive but we can force a kamikaze draw.
             #       At the moment the agent would always try to survive one more step and would only kamikaze if death
             #       is inevitable.
-            death_eval = -depth
+            death_eval = -depth - 1     # -1 to keep negative when depth is 0
             if not min_player.active:
                 # kamikaze is better than just dying without killing someone else
                 death_eval += 0.1
