@@ -148,6 +148,7 @@ class SpeedAgent(Agent):
         # only move agent if new pos is in bounds
         pos = new_pos
         if reached_new_pos:
+            self.trace.append(new_pos)
             self.model.grid.move_agent(self, pos)
             # swapped position args since cells has the format (height, width)
             self.model.cells[pos[1], pos[0]] = self.unique_id
