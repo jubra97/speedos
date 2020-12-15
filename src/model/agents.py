@@ -251,10 +251,11 @@ class NStepSurvivalAgent(SpeedAgent):
     """
     Agent that calculates the next steps and chooses an action where he survives.
     """
-    def __init__(self, model, pos, direction, speed=1, active=True, depth=2):
+    def __init__(self, model, pos, direction, speed=1, active=True, depth=2, deterministic=False):
         super().__init__(model, pos, direction, speed, active)
         self.depth = depth
         self.survival = None
+        self.deterministic = deterministic
 
     def act(self, state):
         self.survival = dict.fromkeys(list(Action), 0)
@@ -262,7 +263,10 @@ class NStepSurvivalAgent(SpeedAgent):
         amaxes = arg_maxes(self.survival.values(), list(self.survival.keys()))
         if len(amaxes) == 0:
             amaxes = list(Action)
-        return np.random.choice(amaxes)
+        if self.deterministic:
+            return amaxes[0]
+        else:
+            return np.random.choice(amaxes)
 
     def deep_search(self, state, depth, initial_action):
         own_id = state["you"]
