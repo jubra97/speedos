@@ -2,9 +2,9 @@ import unittest
 import numpy as np
 
 from src.heuristics.heuristics import multi_minimax
-from src.model.agents import NStepSurvivalAgent, MultiMiniMaxAgent
-from src.model.model import SpeedModel
-from src.utils import Direction, speed_one_voronoi, model_to_json, get_state, Action
+from src.agents import MultiMiniMaxAgent
+from src.model import SpeedModel
+from src.utils import Direction, get_state, Action
 
 
 class TestMultiMiniMax(unittest.TestCase):

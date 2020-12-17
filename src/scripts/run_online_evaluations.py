@@ -1,16 +1,13 @@
-import os
+import asyncio
 import json
+import statistics
+from datetime import datetime
+from pathlib import Path
+from time import sleep
 
 import websockets
-import asyncio
 
-from src.model.agents import RandomAgent, MultiMiniMaxAgent, MultiMiniMaxDeadlineAwareAgent
-from src.utils import state_to_model
-from time import sleep
-from datetime import datetime
-import statistics
-from pathlib import Path
-
+from src.agents import MultiMiniMaxAgent, MultiMiniMaxDeadlineAwareAgent
 
 API_KEY = "IXT57ZEJMO6VFKF3KBZFB4LSEXBMWJ72VEYO2B6WT25UOXEIEAEN25XO"
 
@@ -80,14 +77,13 @@ class RunOnline:
                 self.write_log("Connection with server closed.")
                 break
 
-
     def write_result(self, results_file_path, game_number, game, end_round, avg_r_time, place):
         with open(results_file_path, "a+") as f:
             win = False
             if game["players"][str(game["you"])]["active"]:
                 win = True
 
-            #died in last round or still alive
+            # died in last round or still alive
             if place == -1:
                 if win is True: # could also be tie
                     place = 1

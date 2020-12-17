@@ -1,11 +1,11 @@
+import asyncio
 import datetime
-import os
 import json
+import os
 
 import websockets
-import asyncio
 
-from src.model.agents import RandomAgent, MultiMiniMaxDeadlineAwareAgent
+from src.agents import MultiMiniMaxDeadlineAwareAgent
 
 API_KEY = "IXT57ZEJMO6VFKF3KBZFB4LSEXBMWJ72VEYO2B6WT25UOXEIEAEN25XO"
 
@@ -46,7 +46,7 @@ class RunOnline:
             except websockets.exceptions.ConnectionClosed:
                 print("Connection with server closed.")
                 if self.save:
-                    original_games_path = os.path.abspath("..") + "\\res\\recordedGames\\"
+                    original_games_path = os.path.abspath("../..") + "\\res\\recordedGames\\"
                     with open(original_games_path + datetime.datetime.now().strftime("%d-%m-%y__%H-%M") + ".json", "w") \
                             as f:
                         json.dump(self.history, f, indent=4)

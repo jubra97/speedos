@@ -1,9 +1,10 @@
-import numpy as np
-import pandas as pd
 import webbrowser
 from datetime import datetime
 
-from src.model.model import SpeedModel
+import numpy as np
+import pandas as pd
+
+from src.model import SpeedModel
 
 
 class Evaluator:

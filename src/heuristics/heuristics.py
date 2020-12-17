@@ -1,8 +1,8 @@
-from src.utils import Action, state_to_model, model_to_json, sync_voronoi, speed_one_voronoi, hash_state
+from src.utils import Action, state_to_model, model_to_json
+from src.voronoi import voronoi
 import numpy as np
 import copy
 import matplotlib.pyplot as plt
-from collections import defaultdict
 
 max_cache_depth = 4
 
@@ -23,7 +23,7 @@ def multi_minimax(depth, game_state, super_pruning=False, use_voronoi=True):
     pruning_threshold = -1
     model = state_to_model(game_state)
     own_id = game_state["you"]
-    _, _, is_endgame = speed_one_voronoi(model, own_id)
+    _, _, is_endgame = voronoi(model, own_id)
     max_player = model.get_agent_by_id(own_id)
     min_player_ids = list(map(lambda a: a.unique_id, model.active_speed_agents))
     min_player_ids.remove(own_id)
@@ -164,7 +164,7 @@ def evaluate_position(model, max_player, min_player, depth, max_depth, use_voron
                 globals()["cache"][cache_key] = utility  # cache result
             return utility
 
-        voronoi_cells, voronoi_counter, is_endgame = speed_one_voronoi(model, max_player.unique_id)
+        voronoi_cells, voronoi_counter, is_endgame = voronoi(model, max_player.unique_id)
         nb_cells = float(model.width * model.height)   # for normalization
 
         # voronoi region size comparison

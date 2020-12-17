@@ -1,21 +1,18 @@
-import unittest
-import os
 import json
-from mesa import Model
-from src.model.agents import AgentDummy
-from src.utils import Direction, Action, state_to_model, get_state
+import os
+import unittest
+
 import numpy as np
-import pathlib
+from mesa import Model
+
+from src.agents import AgentDummy
+from src.utils import Direction, Action, state_to_model, get_state
 
 
 class TestModelValidity(unittest.TestCase):
 
     def setUp(self):
-        working_file = os.path.abspath("..")
-        if working_file[-5:] == "model":
-            self.original_games_path = os.path.abspath("..") + "../../../res/originalGames/"
-        else:
-            self.original_games_path = os.path.abspath("..") + "/res/originalGames/"
+        self.original_games_path = os.path.abspath("..") + "../../res/originalGames/"
         self.test_games = os.listdir(self.original_games_path)
         self.model = Model()
         self.maxDiff = None
@@ -66,7 +63,7 @@ class TestModelValidity(unittest.TestCase):
         :param model: The model to be checked
         :return:
         """
-        from src.model.agents import AgentTrace, AgentTraceCollision
+        from src.model import AgentTrace, AgentTraceCollision
         grid_as_np_array = np.empty((model.height, model.width), dtype="int")
         for entry, x, y in model.grid.coord_iter():
             if len(entry) == 0:

@@ -1,16 +1,18 @@
-import os
+import copy
 import datetime
 import json
-import copy
+import os
+import random
+from abc import abstractmethod
 
-from mesa import Model
-from mesa.time import SimultaneousActivation
-from mesa.space import MultiGrid
 import numpy as np
-from src.model.agents import SpeedAgent, AgentTrace, OneStepSurvivalAgent, AgentTraceCollision, MultiMiniMaxAgent
-from src.utils import Direction
-from src.model.agents import SpeedAgent, AgentTrace, OneStepSurvivalAgent, AgentTraceCollision
-from src.utils import Direction, model_to_json
+from mesa import Agent
+from mesa import Model
+from mesa.space import MultiGrid
+from mesa.time import SimultaneousActivation
+
+from src.utils import Direction, Action, get_state
+from src.utils import model_to_json
 
 
 class SpeedModel(Model):
@@ -18,7 +20,7 @@ class SpeedModel(Model):
     Model of the game "Speed". This class controls the execution of the simulation.
     """
 
-    def __init__(self, width, height, nb_agents, cells=None, initial_agents_params=None, agent_classes=None,
+    def __init__(self, width, height, nb_agents, agent_classes, initial_agents_params=None, cells=None,
                  data_collector=None, verbose=False, save=False):
         """
         :param initial_agents_params: A list of dictionaries containing initialization parameters for agents
@@ -59,10 +61,8 @@ class SpeedModel(Model):
             if "direction" not in agent_params:
                 agent_params["direction"] = self.random.choice(list(Direction))
 
-            if agent_classes is None:
-                agent = OneStepSurvivalAgent(**agent_params)
-            else:
-                agent = agent_classes[i](**agent_params)
+            agent = agent_classes[i](**agent_params)
+
             # don't add agent to grid/cells if its out of bounds. But add it to the scheduler.
             if self.grid.out_of_bounds(agent_params["pos"]):
                 self.schedule.add(agent)
@@ -144,7 +144,7 @@ class SpeedModel(Model):
                 self.print_standings()
             if self.save:
                 self.history.append(copy.deepcopy(model_to_json(self)))
-                path = os.path.abspath("..") + "/res/simulatedGames/"
+                path = os.path.abspath("") + "/res/simulatedGames/"
                 for entry in self.history:
                     entry["cells"] = entry["cells"].tolist()
                 with open(path + datetime.datetime.now().strftime("%d-%m-%y__%H-%M-%S-%f") + ".json", "w") as f:
@@ -197,3 +197,182 @@ class SpeedModel(Model):
             if agent.unique_id == unique_id:
                 return agent
         return None
+
+
+class SpeedAgent(Agent):
+    """
+    Abstract representation of an Agent in Speed.
+    """
+
+    def __init__(self, model, pos, direction, speed=1, active=True, trace=None):
+        """
+        :param model: The model that the agent lives in.
+        :param pos: The initial position in (x, y)
+        :param direction: The initial agent direction as a Direction-object
+        :param speed: The initial speed.
+        :param active: Whether or not the agent is not eliminated.
+        """
+        if model is None:
+            # use an empty model if an agent is used to play against an online game
+            model = Model()
+            super().__init__(None, model)
+        else:
+            super().__init__(model.next_id(), model)
+        self.pos = pos
+        self.direction = direction
+        self.speed = speed
+        self.active = active
+        self.deadline = None
+        # Holds all cells that were visited in the last step
+        if trace is None:
+            self.trace = []
+        else:
+            self.trace = trace
+
+        self.action = None
+        self.elimination_step = -1  # Saves the step that the agent was eliminated in (-1 if still active)
+
+    @abstractmethod
+    def act(self, state):
+        """
+        Chooses an action - should be overwritten by an agent implementation.
+        :return: Action
+        """
+        return NotImplementedError
+
+    def step(self):
+        """
+        Fetches the current state and sets the action.
+        :return: None
+        """
+        if not self.active:
+            return
+
+        # set deadline in agent because every agent has 10 seconds of time.
+        acceptable_computing_time = datetime.timedelta(seconds=9.8 + random.uniform(-0.3, 0.3))
+        self.deadline = datetime.datetime.utcnow() + acceptable_computing_time
+
+        state = get_state(self.model, self, self.deadline)
+        self.action = self.act(state)
+        if datetime.datetime.utcnow() > self.deadline:
+            print(f"Agent {self} exceeded Deadline by {datetime.datetime.utcnow() - self.deadline}!")
+            self.set_inactive()
+
+    def advance(self):
+        """
+        Executes the selected action and moves the agent.
+        :return: None
+        """
+        if not self.active:
+            return
+
+        if self.action == Action.TURN_LEFT:
+            self.direction = Direction((self.direction.value - 1) % 4)
+        elif self.action == Action.TURN_RIGHT:
+            self.direction = Direction((self.direction.value + 1) % 4)
+        elif self.action == Action.SLOW_DOWN:
+            self.speed -= 1
+        elif self.action == Action.SPEED_UP:
+            self.speed += 1
+
+        self.move()
+
+    def move(self):
+        """
+        Move the agent according to its direction and speed and creates agent traces.
+        :return: None
+        """
+        if not self.valid_speed():
+            self.trace = []
+            self.set_inactive()
+            self.elimination_step += 1
+            return
+
+        # empty the trace
+        self.trace = []
+
+        # init new pos
+        new_x = self.pos[0]
+        new_y = self.pos[1]
+        old_pos = new_pos = (new_x, new_y)
+        reached_new_pos = True
+
+        # visit all cells that are within "self.speed"
+        for i in range(self.speed):
+            # update position
+            if self.direction == Direction.UP:
+                new_y -= 1
+            elif self.direction == Direction.DOWN:
+                new_y += 1
+            elif self.direction == Direction.LEFT:
+                new_x -= 1
+            elif self.direction == Direction.RIGHT:
+                new_x += 1
+            old_pos = new_pos
+            new_pos = (new_x, new_y)
+            # check borders and speed
+            if self.model.grid.out_of_bounds(new_pos):
+                # add trace at last in front of bound if speed is slow
+                if (self.model.schedule.steps + 1) % 6 != 0 or i == 1 or i == 0:
+                    self.model.add_agent(AgentTrace(self.model, old_pos, self))
+                # remove agent from grid
+                self.model.grid.remove_agent(self)
+                # set pos for matching with original game
+                self.pos = (new_x, new_y)
+                self.set_inactive()
+                self.elimination_step += 1
+                reached_new_pos = False
+                break
+
+            # create trace
+            # trace gaps occur every 6 rounds if the speed is higher than 2.
+            if (self.model.schedule.steps + 1) % 6 != 0 or self.speed < 3 or i == 1 or i == 0:
+                self.model.add_agent(AgentTrace(self.model, old_pos, self))
+                self.trace.append(new_pos)
+
+        # only move agent if new pos is in bounds
+        pos = new_pos
+        if reached_new_pos:
+            if self.trace[-1] != new_pos:
+                self.trace.append(new_pos)
+            self.model.grid.move_agent(self, pos)
+            # swapped position args since cells has the format (height, width)
+            self.model.cells[pos[1], pos[0]] = self.unique_id
+
+    def valid_speed(self):
+        return 1 <= self.speed <= 10
+
+    def set_inactive(self):
+        """
+        Eliminates the agent from the round.
+        :return: None
+        """
+        self.active = False
+        if self in self.model.active_speed_agents:
+            self.model.active_speed_agents.remove(self)
+        self.elimination_step = self.model.schedule.steps
+
+
+class AgentTrace(Agent):
+    """
+    Static trace element of an Agent that occupies one cell.
+    """
+
+    def __init__(self, model, pos, origin):
+        """
+        :param model: The model that the trace exists in.
+        :param pos: The position of the trace element in (x, y)
+        :param origin: The SpeedAgent Object that produced the trace
+        """
+        super().__init__(model.next_id(), model)
+        self.pos = pos
+        self.origin = origin
+
+
+class AgentTraceCollision(AgentTrace):
+    """
+    Static Agent to mark a Collision. Agent_id is always -1.
+    """
+
+    def __init__(self, model, pos):
+        super().__init__(model, pos, None)

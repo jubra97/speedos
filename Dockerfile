@@ -13,7 +13,7 @@ RUN pip install --user -r requirements.txt
 EXPOSE 8521
 
 # copy files
-COPY src/run_online.py .
+COPY src/scripts/run_online.py .
 COPY src/ src/
 
 CMD [ "python", "./run_online.py" ]

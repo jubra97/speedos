@@ -1,9 +1,12 @@
-from mesa.visualization.modules import CanvasGrid
-from mesa.visualization.UserParam import UserSettableParameter
-from mesa.visualization.ModularVisualization import ModularServer
 from collections import defaultdict
-from src.model.model import SpeedModel
-from src.model.agents import SpeedAgent, AgentTrace, HumanAgent, OneStepSurvivalAgent, RandomAgent, MultiMiniMaxAgent
+
+from mesa.visualization.ModularVisualization import ModularServer
+from mesa.visualization.UserParam import UserSettableParameter
+from mesa.visualization.modules import CanvasGrid
+
+from src.agents import MultiMiniMaxAgent
+from src.model import SpeedAgent, AgentTrace
+from src.model import SpeedModel
 
 
 class CustomCanvasGrid(CanvasGrid):
@@ -47,29 +50,30 @@ def agent_portrayal(agent):
     return portrayal
 
 
-# Parameters
-WIDTH = 5
-HEIGHT = 5
-COLOR_PALETTE = [
-    'green',
-    'blue',
-    'red',
-    'black',
-    'pink',
-    'orange'
-]
-model_params = {
-    "width": WIDTH,
-    "height": HEIGHT,
-    "agent_classes": [MultiMiniMaxAgent, MultiMiniMaxAgent],
-    "nb_agents": UserSettableParameter('slider', 'Amount of Agents', value=2, min_value=1, max_value=6, step=1)
-}
-grid = CustomCanvasGrid(agent_portrayal, WIDTH, HEIGHT, 700, 700)
+if __name__ == "__main__":
+    # Parameters
+    WIDTH = 5
+    HEIGHT = 5
+    COLOR_PALETTE = [
+        'green',
+        'blue',
+        'red',
+        'black',
+        'pink',
+        'orange'
+    ]
+    model_params = {
+        "width": WIDTH,
+        "height": HEIGHT,
+        "agent_classes": [MultiMiniMaxAgent, MultiMiniMaxAgent],
+        "nb_agents": UserSettableParameter('slider', 'Amount of Agents', value=2, min_value=1, max_value=6, step=1)
+    }
+    grid = CustomCanvasGrid(agent_portrayal, WIDTH, HEIGHT, 700, 700)
 
-# create and launch server instance
-server = ModularServer(SpeedModel,
-                       [grid],
-                       "Speed",
-                       model_params)
-server.port = 8521
-server.launch()
+    # create and launch server instance
+    server = ModularServer(SpeedModel,
+                           [grid],
+                           "Speed",
+                           model_params)
+    server.port = 8521
+    server.launch()

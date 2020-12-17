@@ -1,9 +1,13 @@
 import unittest
+
+import numpy as np
 from mesa import Model
 
-from src.model.model import SpeedModel
+from src.agents import NStepSurvivalAgent
+from src.model import SpeedAgent
+from src.model import SpeedModel
 from src.utils import *
-from src.model.agents import SpeedAgent, RandomAgent, NStepSurvivalAgent
+from src.voronoi import voronoi
 
 
 class TestAgentToJson(unittest.TestCase):
@@ -64,14 +68,14 @@ class TestVoronoi(unittest.TestCase):
         ]
         model = SpeedModel(width=10, height=10, nb_agents=2, initial_agents_params=initial_agents_params,
                            agent_classes=[NStepSurvivalAgent for _ in range(2)])
-        particle_cells, region_sizes, is_endgame = speed_one_voronoi(model, model.active_speed_agents[0].unique_id)
+        particle_cells, region_sizes, is_endgame = voronoi(model, model.active_speed_agents[0].unique_id)
         self.assertEqual({0: 2, 1: 48, 2: 50}, region_sizes)
         self.assertEqual(False, is_endgame)
 
         # run for 5 steps and tests again
         for _ in range(5):
             model.step()
-        particle_cells, region_sizes, is_endgame = speed_one_voronoi(model, model.active_speed_agents[0].unique_id)
+        particle_cells, region_sizes, is_endgame = voronoi(model, model.active_speed_agents[0].unique_id)
         self.assertEqual({0: 12, 1: 53, 2: 35}, region_sizes)
         self.assertEqual(False, is_endgame)
 
@@ -86,14 +90,14 @@ class TestVoronoi(unittest.TestCase):
         ]
         model = SpeedModel(width=50, height=50, nb_agents=6, initial_agents_params=initial_agents_params,
                            agent_classes=[NStepSurvivalAgent for _ in range(6)])
-        particle_cells, region_sizes, is_endgame = speed_one_voronoi(model, model.active_speed_agents[0].unique_id)
+        particle_cells, region_sizes, is_endgame = voronoi(model, model.active_speed_agents[0].unique_id)
         self.assertEqual({-1: 83, 0: 6, 1: 126, 2: 477, 3: 457, 4: 422, 5: 349, 6: 580}, region_sizes)
         self.assertEqual(False, is_endgame)
 
         # run for 5 steps and tests again
         for _ in range(5):
             model.step()
-        particle_cells, region_sizes, is_endgame = speed_one_voronoi(model, model.active_speed_agents[0].unique_id)
+        particle_cells, region_sizes, is_endgame = voronoi(model, model.active_speed_agents[0].unique_id)
         self.assertEqual({-1: 76, 0: 32, 2: 484, 3: 456, 4: 437, 5: 493, 6: 522}, region_sizes)
         self.assertEqual(False, is_endgame)
 
@@ -110,13 +114,13 @@ class TestVoronoi(unittest.TestCase):
         ]
         model = SpeedModel(width=5, height=3, nb_agents=2, cells=cells, initial_agents_params=initial_agents_params,
                            agent_classes=[NStepSurvivalAgent for _ in range(2)])
-        particle_cells, region_sizes, is_endgame = speed_one_voronoi(model, 1)
+        particle_cells, region_sizes, is_endgame = voronoi(model, 1)
         self.assertEqual({0: 8, 1: 5, 2: 2}, region_sizes)
         self.assertEqual(True, is_endgame)
 
         # run one steps and tests again
         model.step()
-        particle_cells, region_sizes, is_endgame = speed_one_voronoi(model, 1)
+        particle_cells, region_sizes, is_endgame = voronoi(model, 1)
         self.assertEqual({0: 10, 1: 4, 2: 1}, region_sizes)
         self.assertEqual(True, is_endgame)
 
