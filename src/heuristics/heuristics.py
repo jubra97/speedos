@@ -1,7 +1,7 @@
 from src.utils import Action, state_to_model, model_to_json, sync_voronoi, speed_one_voronoi, hash_state
 import numpy as np
 import copy
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 from collections import defaultdict
 
 max_cache_depth = 4
@@ -119,11 +119,11 @@ def minimax(max_player, min_player, depth, max_depth, alpha, beta, is_max, model
 
 def evaluate_position(model, max_player, min_player, depth, max_depth, use_voronoi, tree_path=None, caching_enabled=False):
     # use cached value
-    #print("evaluate " + tree_path)
+    print("evaluate " + tree_path)
     if caching_enabled and globals()["cache"] is not None:
         cache_key = tree_path #hash_state(state)
         if cache_key in globals()["cache"]:
-            #print("found cached " + tree_path)
+            print("found cached " + tree_path)
             return globals()["cache"][cache_key]
 
     if not use_voronoi:
@@ -192,8 +192,6 @@ def add_territory_bonus(model, x, y):
 
 
 def visualize_voronoi(cells):
-    import matplotlib.pyplot as plt
-
     res = np.zeros((cells.shape[0], cells.shape[1]), dtype=np.int)
     for x in range(cells.shape[0]):
         for y in range(cells.shape[1]):

@@ -6,8 +6,8 @@ from src.utils import Direction, Action, get_state, arg_maxes, state_to_model, m
 from src.utils import Direction, Action, get_state, arg_maxes, state_to_model
 from src.heuristics import heuristics
 import numpy as np
-#from pynput import keyboard
-#import matplotlib.pyplot as plt
+from pynput import keyboard
+import matplotlib.pyplot as plt
 import multiprocessing
 import datetime
 import random
@@ -292,8 +292,6 @@ class NStepSurvivalAgent(SpeedAgent):
 class HumanAgent(SpeedAgent):
 
     def act(self, state):
-        from pynput import keyboard
-
         with keyboard.Events() as events:
             # Block for as much as possible
             input_key = events.get(1000000).key
