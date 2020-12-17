@@ -343,8 +343,9 @@ class MultiMiniMaxDeadlineAwareAgent(SpeedAgent):
 
     def act(self, state):
         move = multiprocessing.Value('i', 4)
+        reached_depth = multiprocessing.Value('i', 0)
         p = multiprocessing.Process(target=heuristics.multi_minimax_depth_first_iterative_deepening, name="DFID",
-                                    args=(move, state, self.super_pruning, self.use_voronoi))
+                                    args=(move, reached_depth, state, self.super_pruning, self.use_voronoi))
         p.start()
         send_time = 3
         deadline = datetime.datetime.strptime(state["deadline"], "%Y-%m-%dT%H:%M:%SZ")
@@ -359,6 +360,7 @@ class MultiMiniMaxDeadlineAwareAgent(SpeedAgent):
             p.terminate()
             p.join()
 
+        print(f"reached_depth: {reached_depth.value}")
         return Action(move.value)
 
 
