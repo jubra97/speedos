@@ -5,19 +5,25 @@ from mesa import Model
 from src.model.agents import AgentDummy
 from src.utils import Direction, Action, state_to_model, get_state
 import numpy as np
+import pathlib
 
 
 class TestModelValidity(unittest.TestCase):
 
     def setUp(self):
-        self.original_games_path = os.path.abspath("..") + "../../../res/originalGames/"
+        working_file = os.path.abspath("..")
+        if working_file[-5:] == "model":
+            self.original_games_path = os.path.abspath("..") + "../../../res/originalGames/"
+        else:
+            self.original_games_path = os.path.abspath("..") + "/res/originalGames/"
         self.test_games = os.listdir(self.original_games_path)
         self.model = Model()
         self.maxDiff = None
 
     def test_default_params(self):
         for game in self.test_games:
-            print(f"Checking Game: {game}")
+            # uncomment this for debugging to find out which game has failed
+            # print(f"Checking Game: {game}")
             path_to_game = self.original_games_path + game
             with open(path_to_game, "r") as file:
                 game = json.load(file)
@@ -96,7 +102,7 @@ class TestModelValidity(unittest.TestCase):
         next_direction = Direction[
             org_game[model.schedule.steps + 1]["players"][agent_id]["direction"].upper()].value
         # In the real game the the agent sometimes doesn't move and gets inactive.
-        # This behavior is not implemented in the model but should not let the test fail.
+        # This behavior is not implemented in the model but should not let the tests fail.
         if org_game[model.schedule.steps]["players"][agent_id]["x"] == org_game[model.schedule.steps + 1]["players"][agent_id]["x"] and \
             org_game[model.schedule.steps]["players"][agent_id]["y"] == org_game[model.schedule.steps + 1]["players"][agent_id]["y"] and \
                 org_game[model.schedule.steps]["players"][agent_id]["speed"] == org_game[model.schedule.steps + 1]["players"][agent_id]["speed"]:
