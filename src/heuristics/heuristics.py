@@ -118,7 +118,7 @@ def minimax(max_player, min_player, depth, max_depth, alpha, beta, is_max, model
 
 def evaluate_position(model, max_player, min_player, depth, max_depth, use_voronoi, tree_path=None, caching_enabled=False):
     # use cached value
-    print("evaluate " + tree_path)
+    #print("evaluate " + tree_path)
     if caching_enabled and globals()["cache"] is not None:
         cache_key = tree_path #hash_state(state)
         if cache_key in globals()["cache"]:
@@ -129,7 +129,12 @@ def evaluate_position(model, max_player, min_player, depth, max_depth, use_voron
         if max_player.active and not min_player.active:
             return float("inf")
         else:
-            return -1 * depth
+            # subtract a high number if agent died (otherwise dying in the last step is as good as survival)
+            if not max_player.active:
+                death_penalty = 1000
+            else:
+                death_penalty = 0
+            return -1 * depth - death_penalty
     else:
         # weights - all non-weighted evaluation values should be in [-1, 1]
         # using very large weight gaps is effectively like prioritization
