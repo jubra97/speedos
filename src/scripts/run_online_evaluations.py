@@ -7,13 +7,13 @@ from time import sleep
 
 import websockets
 
-from src.agents import MultiMiniMaxAgent, MultiMiniMaxDeadlineAwareAgent
+from src.agents import LiveAgent
 
 API_KEY = "IXT57ZEJMO6VFKF3KBZFB4LSEXBMWJ72VEYO2B6WT25UOXEIEAEN25XO"
 
 
 class RunOnline:
-    def __init__(self, agent=MultiMiniMaxAgent, save_files_dir=None, log_file_dir=None):
+    def __init__(self, agent=LiveAgent, save_files_dir=None, log_file_dir=None):
         self.connection = None
         #self.history = []
         self.agent = agent(None, None, None)
@@ -113,7 +113,7 @@ if __name__ == "__main__":
     results_file_path = run_dir + "/results.txt"
     log_file_path = run_dir + "/log.txt"
 
-    runner = RunOnline(agent=MultiMiniMaxDeadlineAwareAgent, save_files_dir=json_dir, log_file_dir=log_file_path)
+    runner = RunOnline(agent=LiveAgent, save_files_dir=json_dir, log_file_dir=log_file_path)
     games = 0
     wins = 0
 
