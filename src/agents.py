@@ -11,6 +11,7 @@ from src.utils import Action, get_state, arg_maxes, state_to_model, model_to_jso
 from src.voronoi import voronoi
 import numpy as np
 import copy
+from scipy.spatial import distance
 
 
 class AgentDummy(SpeedAgent):
@@ -116,7 +117,7 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
         super().__init__(model, pos, direction, speed, active)
         self.time_for_move = time_for_move
         self.max_cache_depth = 4
-        self.depth = 1
+        self.depth = 2
 
     def act(self, state):
         globals()["cache"] = dict()  # defaultdict(int)
@@ -158,6 +159,10 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
         alpha = float("-inf")
         copy_actions = copy.deepcopy(list(Action))
         for action in reversed(copy_actions):
+            if max_player.speed == 1 and action == Action.SLOW_DOWN:
+                continue
+            if max_player.speed == 10 and action == Action.SPEED_UP:
+                continue
             pre_state = model_to_json(model, trace_aware=True)
             max_player.action = action
             model.step_specific_agent(max_player)
@@ -194,7 +199,8 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
         if is_max or is_endgame:
             max_move = float("-inf")
             pre_state = model_to_json(model, trace_aware=True)
-            for action in list(Action):
+            sorted_action_list = [Action.CHANGE_NOTHING, Action.TURN_LEFT, Action.TURN_RIGHT, Action.SPEED_UP, Action.SLOW_DOWN]
+            for action in sorted_action_list:
                 max_player.action = action
                 model.step_specific_agent(max_player)
                 tree_path += str(action.value)
@@ -215,7 +221,8 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
         else:
             min_move = float("inf")
             pre_state = model_to_json(model, trace_aware=True)
-            for action in list(Action):
+            sorted_action_list = [Action.CHANGE_NOTHING, Action.TURN_LEFT, Action.TURN_RIGHT, Action.SPEED_UP, Action.SLOW_DOWN]
+            for action in list(sorted_action_list):
                 min_player.action = action
                 model.step_specific_agent(min_player)
                 tree_path += str(action.value)
@@ -264,7 +271,7 @@ class VoronoiMultiMiniMaxAgent(BaseMultiMiniMaxAgent):
         super().__init__(model, pos, direction, speed, active, time_for_move)
         self.time_for_move = time_for_move
         self.max_cache_depth = 4
-        self.depth = 1
+        self.depth = 2
 
     def evaluate_position(self, model, max_player, min_player, depth, tree_path=None, caching_enabled=False):
         if caching_enabled and globals()["cache"] is not None:
@@ -334,14 +341,76 @@ def add_territory_bonus(model, x, y):
     return bonus
 
 
-class LiveAgent(VoronoiMultiMiniMaxAgent):
+class ReduceOpponentsVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
+    """
+    Agent that chooses an action based on the multi minimax algorithm and uses voronoi as evaluation
+    """
+
+    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=5):
+        super().__init__(model, pos, direction, speed, active, time_for_move)
+        self.time_for_move = time_for_move
+        self.max_cache_depth = 4
+        self.depth = 2
+
+    def multi_minimax(self, depth, game_state):
+        model = state_to_model(game_state)
+        own_id = game_state["you"]
+        _, _, is_endgame = voronoi(model, own_id)
+        max_player = model.get_agent_by_id(own_id)
+        min_player_ids = list(map(lambda a: a.unique_id, model.active_speed_agents))
+        min_player_ids.remove(own_id)
+        min_player_ids.sort(key=lambda id: distance.euclidean(model.get_agent_by_id(id).pos, max_player.pos), reverse=True)
+        if len(min_player_ids) >= 2:
+            min_player_ids = min_player_ids[-2:]
+
+        move_to_make = Action.CHANGE_NOTHING
+        max_move = float("-inf")
+        alpha = float("-inf")
+        sorted_action_list = [Action.CHANGE_NOTHING, Action.TURN_LEFT, Action.TURN_RIGHT, Action.SPEED_UP, Action.SLOW_DOWN]
+        for action in sorted_action_list:
+            if max_player.speed == 1 and action == Action.SLOW_DOWN:
+                continue
+            if max_player.speed == 10 and action == Action.SPEED_UP:
+                continue
+            pre_state = model_to_json(model, trace_aware=True)
+            max_player.action = action
+            model.step_specific_agent(max_player)
+            tree_path = str(action.value)
+            min_move = float("inf")
+            beta = float("inf")
+            for opponent_id in min_player_ids:
+                opponent = model.get_agent_by_id(opponent_id)
+
+                min_move = min(min_move, self.minimax(max_player, opponent, depth - 1, alpha, beta, False,
+                                                      model, is_endgame, tree_path=tree_path))
+
+                model = state_to_model(pre_state, trace_aware=True)
+                max_player = model.get_agent_by_id(own_id)
+                beta = min_move
+
+                if alpha >= beta:
+                    break
+                if is_endgame:
+                    break
+
+            if min_move >= max_move:
+                if min_move == max_move:
+                    move_to_make = np.random.choice([move_to_make, action])
+                else:
+                    move_to_make = action
+                max_move = min_move
+                alpha = max_move
+        return move_to_make
+
+
+class LiveAgent(ReduceOpponentsVoronoiMultiMiniMaxAgent):
     """
     Live Agent
     """
     def __init__(self, model, pos, direction, speed=1, active=True):
         super().__init__(model, pos, direction, speed, active)
         self.max_cache_depth = 4
-        self.depth = 1
+        self.depth = 2
 
     def act(self, state):
         globals()["cache"] = dict()  # defaultdict(int)
@@ -366,5 +435,3 @@ class LiveAgent(VoronoiMultiMiniMaxAgent):
 
         print(f"reached_depth: {reached_depth.value}")
         return Action(move.value)
-
-
