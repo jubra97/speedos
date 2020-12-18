@@ -4,7 +4,7 @@ from mesa.visualization.ModularVisualization import ModularServer
 from mesa.visualization.UserParam import UserSettableParameter
 from mesa.visualization.modules import CanvasGrid
 
-from src.agents import MultiMiniMaxAgent
+from src.agents import BaseMultiMiniMaxAgent, VoronoiMultiMiniMaxAgent, SortedActionsVoronoiMultiMiniMaxAgent
 from src.model import SpeedAgent, AgentTrace
 from src.model import SpeedModel
 
@@ -52,8 +52,8 @@ def agent_portrayal(agent):
 
 if __name__ == "__main__":
     # Parameters
-    WIDTH = 5
-    HEIGHT = 5
+    WIDTH = 20
+    HEIGHT = 20
     COLOR_PALETTE = [
         'green',
         'blue',
@@ -65,7 +65,7 @@ if __name__ == "__main__":
     model_params = {
         "width": WIDTH,
         "height": HEIGHT,
-        "agent_classes": [MultiMiniMaxAgent, MultiMiniMaxAgent],
+        "agent_classes": [VoronoiMultiMiniMaxAgent, SortedActionsVoronoiMultiMiniMaxAgent],
         "nb_agents": UserSettableParameter('slider', 'Amount of Agents', value=2, min_value=1, max_value=6, step=1)
     }
     grid = CustomCanvasGrid(agent_portrayal, WIDTH, HEIGHT, 700, 700)

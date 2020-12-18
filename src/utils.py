@@ -2,7 +2,8 @@ import copy
 import hashlib
 import json
 from enum import Enum
-
+import numpy as np
+import matplotlib.pyplot as plt
 
 class Direction(Enum):
     UP = 0
@@ -150,3 +151,16 @@ def json_to_history(path_to_json, output_path, horizontal=False):
             outfile.write("\n-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\t-\n")
 
     outfile.close()
+
+
+def visualize_online_games(data_path, amount_of_games):
+    for i in range(1, amount_of_games+1):
+        path_to_json = f"{data_path}{i}.json"
+
+        with open(path_to_json, encoding="utf-8") as f:
+            data = json.load(f)
+
+        cells = np.asarray(data["cells"])
+
+        plt.imshow(cells)
+        plt.show()

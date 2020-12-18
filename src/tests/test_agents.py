@@ -1,8 +1,7 @@
 import unittest
 import numpy as np
 
-from src.heuristics.heuristics import multi_minimax
-from src.agents import MultiMiniMaxAgent
+from src.agents import BaseMultiMiniMaxAgent, VoronoiMultiMiniMaxAgent
 from src.model import SpeedModel
 from src.utils import Direction, get_state, Action
 
@@ -23,21 +22,28 @@ class TestMultiMiniMax(unittest.TestCase):
             {"pos": (3, 0), "direction": Direction.LEFT}
         ]
         model = SpeedModel(width=5, height=5, nb_agents=2, cells=cells, initial_agents_params=initial_agents_params,
-                           agent_classes=[MultiMiniMaxAgent for _ in range(2)])
+                           agent_classes=[BaseMultiMiniMaxAgent, BaseMultiMiniMaxAgent])
 
         # without voronoi
-        action_agent_1 = multi_minimax(depth=2, game_state=get_state(model, model.active_speed_agents[0]),
-                                       super_pruning=False, use_voronoi=False)
-        action_agent_2 = multi_minimax(depth=2, game_state=get_state(model, model.active_speed_agents[1]),
-                                       super_pruning=False, use_voronoi=False)
+        action_agent_1 = model.active_speed_agents[0].multi_minimax(depth=2,
+                                                                    game_state=get_state(model,
+                                                                                         model.active_speed_agents[0]))
+        action_agent_2 = model.active_speed_agents[0].multi_minimax(depth=2,
+                                                                    game_state=get_state(model,
+                                                                                         model.active_speed_agents[1]))
         self.assertEqual(Action.TURN_RIGHT, action_agent_1)
         self.assertEqual(Action.TURN_LEFT, action_agent_2)
 
+        model = SpeedModel(width=5, height=5, nb_agents=2, cells=cells, initial_agents_params=initial_agents_params,
+                           agent_classes=[VoronoiMultiMiniMaxAgent, VoronoiMultiMiniMaxAgent])
+
         # with voronoi
-        action_agent_1 = multi_minimax(depth=2, game_state=get_state(model, model.active_speed_agents[0]),
-                                       super_pruning=False, use_voronoi=True)
-        action_agent_2 = multi_minimax(depth=2, game_state=get_state(model, model.active_speed_agents[1]),
-                                       super_pruning=False, use_voronoi=True)
+        action_agent_1 = model.active_speed_agents[0].multi_minimax(depth=2,
+                                                                    game_state=get_state(model,
+                                                                                         model.active_speed_agents[0]))
+        action_agent_2 = model.active_speed_agents[0].multi_minimax(depth=2,
+                                                                    game_state=get_state(model,
+                                                                                         model.active_speed_agents[1]))
         self.assertEqual(Action.TURN_RIGHT, action_agent_1)
         self.assertEqual(Action.TURN_LEFT, action_agent_2)
 
@@ -55,16 +61,21 @@ class TestMultiMiniMax(unittest.TestCase):
             {"pos": (6, 0), "direction": Direction.LEFT}
         ]
         model = SpeedModel(width=7, height=4, nb_agents=2, cells=cells, initial_agents_params=initial_agents_params,
-                           agent_classes=[MultiMiniMaxAgent for _ in range(2)])
+                           agent_classes=[BaseMultiMiniMaxAgent for _ in range(2)])
 
         # without voronoi
-        action_agent_1 = multi_minimax(depth=8, game_state=get_state(model, model.active_speed_agents[0]),
-                                       super_pruning=False, use_voronoi=False)
+        action_agent_1 = model.active_speed_agents[0].multi_minimax(depth=8,
+                                                                    game_state=get_state(model,
+                                                                                         model.active_speed_agents[0]))
         self.assertEqual(Action.TURN_RIGHT, action_agent_1)
 
+        model = SpeedModel(width=7, height=4, nb_agents=2, cells=cells, initial_agents_params=initial_agents_params,
+                           agent_classes=[VoronoiMultiMiniMaxAgent for _ in range(2)])
+
         # with voronoi
-        action_agent_1 = multi_minimax(depth=8, game_state=get_state(model, model.active_speed_agents[0]),
-                                       super_pruning=False, use_voronoi=True)
+        action_agent_1 = model.active_speed_agents[0].multi_minimax(depth=8,
+                                                                    game_state=get_state(model,
+                                                                                         model.active_speed_agents[0]))
         self.assertEqual(Action.TURN_RIGHT, action_agent_1)
 
     def test_cut_off(self):
@@ -85,10 +96,11 @@ class TestMultiMiniMax(unittest.TestCase):
             {"pos": (3, 6), "direction": Direction.UP}
         ]
         model = SpeedModel(width=7, height=8, nb_agents=2, cells=cells, initial_agents_params=initial_agents_params,
-                           agent_classes=[MultiMiniMaxAgent for _ in range(2)])
+                           agent_classes=[VoronoiMultiMiniMaxAgent for _ in range(2)])
 
-        action_agent_1 = multi_minimax(depth=2, game_state=get_state(model, model.active_speed_agents[0]),
-                                       super_pruning=False, use_voronoi=True)
+        action_agent_1 = model.active_speed_agents[0].multi_minimax(depth=2,
+                                                                    game_state=get_state(model,
+                                                                                         model.active_speed_agents[0]))
         self.assertEqual(Action.SPEED_UP, action_agent_1)
 
     def test_kamikaze(self):
@@ -106,16 +118,21 @@ class TestMultiMiniMax(unittest.TestCase):
             {"pos": (1, 2), "direction": Direction.LEFT}
         ]
         model = SpeedModel(width=5, height=5, nb_agents=2, cells=cells, initial_agents_params=initial_agents_params,
-                           agent_classes=[MultiMiniMaxAgent for _ in range(2)])
+                           agent_classes=[BaseMultiMiniMaxAgent for _ in range(2)])
 
         # without voronoi
-        action_agent_1 = multi_minimax(depth=2, game_state=get_state(model, model.active_speed_agents[0]),
-                                       super_pruning=False, use_voronoi=False)
+        action_agent_1 = model.active_speed_agents[0].multi_minimax(depth=2,
+                                                                    game_state=get_state(model,
+                                                                                         model.active_speed_agents[0]))
         self.assertEqual(Action.CHANGE_NOTHING, action_agent_1)
 
+        model = SpeedModel(width=5, height=5, nb_agents=2, cells=cells, initial_agents_params=initial_agents_params,
+                           agent_classes=[VoronoiMultiMiniMaxAgent for _ in range(2)])
+
         # with voronoi
-        action_agent_1 = multi_minimax(depth=2, game_state=get_state(model, model.active_speed_agents[0]),
-                                       super_pruning=False, use_voronoi=True)
+        action_agent_1 = model.active_speed_agents[0].multi_minimax(depth=2,
+                                                                    game_state=get_state(model,
+                                                                                         model.active_speed_agents[0]))
         self.assertEqual(Action.CHANGE_NOTHING, action_agent_1)
 
     @unittest.skip  # not yet implemented
@@ -137,14 +154,19 @@ class TestMultiMiniMax(unittest.TestCase):
             {"pos": (1, 2), "direction": Direction.LEFT}
         ]
         model = SpeedModel(width=5, height=6, nb_agents=2, cells=cells, initial_agents_params=initial_agents_params,
-                           agent_classes=[MultiMiniMaxAgent for _ in range(2)])
+                           agent_classes=[BaseMultiMiniMaxAgent for _ in range(2)])
 
         # without voronoi
-        action_agent_1 = multi_minimax(depth=2, game_state=get_state(model, model.active_speed_agents[0]),
-                                       super_pruning=False, use_voronoi=False)
+        action_agent_1 = model.active_speed_agents[0].multi_minimax(depth=2,
+                                                                    game_state=get_state(model,
+                                                                                         model.active_speed_agents[0]))
         self.assertEqual(Action.SPEED_UP, action_agent_1)
 
+        model = SpeedModel(width=5, height=6, nb_agents=2, cells=cells, initial_agents_params=initial_agents_params,
+                           agent_classes=[VoronoiMultiMiniMaxAgent for _ in range(2)])
+
         # with voronoi
-        action_agent_1 = multi_minimax(depth=2, game_state=get_state(model, model.active_speed_agents[0]),
-                                       super_pruning=False, use_voronoi=True)
+        action_agent_1 = model.active_speed_agents[0].multi_minimax(depth=2,
+                                                                    game_state=get_state(model,
+                                                                                         model.active_speed_agents[0]))
         self.assertEqual(Action.SPEED_UP, action_agent_1)

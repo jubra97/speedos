@@ -5,13 +5,13 @@ import os
 
 import websockets
 
-from src.agents import MultiMiniMaxDeadlineAwareAgent
+from src.agents import LiveAgent
 
 API_KEY = "IXT57ZEJMO6VFKF3KBZFB4LSEXBMWJ72VEYO2B6WT25UOXEIEAEN25XO"
 
 
 class RunOnline:
-    def __init__(self, agent=MultiMiniMaxDeadlineAwareAgent, save=False):
+    def __init__(self, agent=LiveAgent, save=False):
         self.connection = None
         self.history = []
         self.agent = agent(None, None, None)
@@ -38,7 +38,6 @@ class RunOnline:
                     action = self.agent.act(message)
                     respond = str(action)
                     respond = f'{{"action": "{respond}"}}'
-                    print(respond)
                     try:
                         await self.connection.send(respond)
                     except Exception as e:
@@ -54,5 +53,5 @@ class RunOnline:
 
 
 if __name__ == "__main__":
-    runner = RunOnline(agent=MultiMiniMaxDeadlineAwareAgent)
+    runner = RunOnline(agent=LiveAgent)
     asyncio.get_event_loop().run_until_complete(runner.run())
