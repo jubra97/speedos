@@ -5,13 +5,11 @@ from itertools import permutations
 import numpy as np
 import requests
 from pynput import keyboard
+from scipy.spatial import distance
 
 from src.model import SpeedAgent
 from src.utils import Action, get_state, arg_maxes, state_to_model, model_to_json
 from src.voronoi import voronoi
-import numpy as np
-import copy
-from scipy.spatial import distance
 
 
 class AgentDummy(SpeedAgent):
@@ -113,14 +111,18 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
     """
     Agent that chooses an action based on the multi minimax algorithm
     """
-    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=1):
+    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=1, caching_enabled=False):
         super().__init__(model, pos, direction, speed, active)
         self.time_for_move = time_for_move
-        self.max_cache_depth = 4
         self.depth = 2
+        self.caching_enabled = caching_enabled
+        if caching_enabled:
+            self.max_cache_depth = 4
+            self.tree_path = None
 
     def act(self, state):
-        globals()["cache"] = dict()  # defaultdict(int)
+        if self.caching_enabled:
+            globals()["cache"] = dict()  # defaultdict(int)
 
         move = multiprocessing.Value('i', 4)
         reached_depth = multiprocessing.Value('i', 0)
@@ -129,9 +131,8 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
         p.start()
         p.join(self.time_for_move)
 
-        # If thread is active
+        # Force termination
         if p.is_alive():
-            # Terminate foo
             p.terminate()
             p.join()
 
@@ -147,6 +148,21 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
             self.depth += 1
 
     def multi_minimax(self, depth, game_state):
+        model, max_player, min_player_ids, is_endgame, move_to_make, max_move, alpha, actions = \
+            self.init_multi_minimax(game_state)
+        for action in actions:
+            tree_path = str(action.value)
+            pre_state = model_to_json(model, trace_aware=True)
+            self.update_model(model, max_player, action)
+            min_move = float("inf")
+
+            model, max_player, min_move, alpha = self.move_min_players(model, max_player, min_player_ids, min_move,
+                                                                       depth, alpha, is_endgame, tree_path, pre_state)
+            move_to_make, max_move, alpha = self.update_move_to_make(min_move, move_to_make, action, max_move, alpha)
+
+        return move_to_make
+
+    def init_multi_minimax(self, game_state):
         model = state_to_model(game_state)
         own_id = game_state["you"]
         _, _, is_endgame = voronoi(model, own_id)
@@ -157,110 +173,159 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
         move_to_make = Action.CHANGE_NOTHING
         max_move = float("-inf")
         alpha = float("-inf")
-        copy_actions = copy.deepcopy(list(Action))
-        for action in reversed(copy_actions):
-            if max_player.speed == 1 and action == Action.SLOW_DOWN:
-                continue
-            if max_player.speed == 10 and action == Action.SPEED_UP:
-                continue
-            pre_state = model_to_json(model, trace_aware=True)
-            max_player.action = action
-            model.step_specific_agent(max_player)
-            tree_path = str(action.value)
-            min_move = float("inf")
-            beta = float("inf")
-            for opponent_id in min_player_ids:
-                opponent = model.get_agent_by_id(opponent_id)
+        actions = self.init_actions()
+        return model, max_player, min_player_ids, is_endgame, move_to_make, max_move, alpha, actions
 
-                min_move = min(min_move, self.minimax(max_player, opponent, depth - 1, alpha, beta, False,
-                                                      model, is_endgame, tree_path=tree_path))
+    def move_min_players(self, model, max_player, min_player_ids, min_move, depth, alpha, is_endgame, tree_path, pre_state):
+        beta = float("inf")
+        for min_player_id in min_player_ids:
+            min_player = model.get_agent_by_id(min_player_id)
+            min_move = min(min_move, self.minimax(max_player, min_player, depth - 1, alpha, beta, False, model,
+                                                  is_endgame, tree_path))
+            model, max_player, _ = self.reset_model(pre_state, max_player, min_player)
 
-                model = state_to_model(pre_state, trace_aware=True)
-                max_player = model.get_agent_by_id(own_id)
-                beta = min_move
+            beta = min_move
+            if alpha >= beta or is_endgame:
+                break
+        return model, max_player, min_move, alpha
 
-                if alpha >= beta:
-                    break
-                if is_endgame:
-                    break
-
-            if min_move >= max_move:
-                if min_move == max_move:
-                    move_to_make = np.random.choice([move_to_make, action])
-                else:
-                    move_to_make = action
-                max_move = min_move
-                alpha = max_move
-        return move_to_make
-
-    def minimax(self, max_player, min_player, depth, alpha, beta, is_max, model, is_endgame, tree_path=None):
-        if depth == 0 or not max_player.active or not model.running:
-            return self.evaluate_position(model, max_player, min_player, depth, tree_path=tree_path)
-        if is_max or is_endgame:
-            max_move = float("-inf")
-            pre_state = model_to_json(model, trace_aware=True)
-            sorted_action_list = [Action.CHANGE_NOTHING, Action.TURN_LEFT, Action.TURN_RIGHT, Action.SPEED_UP, Action.SLOW_DOWN]
-            for action in sorted_action_list:
-                max_player.action = action
-                model.step_specific_agent(max_player)
-                tree_path += str(action.value)
-
-                max_move = max(max_move, self.minimax(max_player, min_player, depth - 1, alpha, beta, False,
-                                                      model, is_endgame, tree_path=tree_path))
-
-                model = state_to_model(pre_state, trace_aware=True)
-                own_id = max_player.unique_id
-                max_player = model.get_agent_by_id(own_id)
-                min_player_id = min_player.unique_id
-                min_player = model.get_agent_by_id(min_player_id)
-
-                alpha = max(alpha, max_move)
-                if alpha >= beta:
-                    break
-            return max_move
-        else:
-            min_move = float("inf")
-            pre_state = model_to_json(model, trace_aware=True)
-            sorted_action_list = [Action.CHANGE_NOTHING, Action.TURN_LEFT, Action.TURN_RIGHT, Action.SPEED_UP, Action.SLOW_DOWN]
-            for action in list(sorted_action_list):
-                min_player.action = action
-                model.step_specific_agent(min_player)
-                tree_path += str(action.value)
-
-                min_move = min(min_move, self.minimax(max_player, min_player, depth - 1, alpha, beta, True,
-                                                      model, is_endgame, tree_path=tree_path))
-
-                model = state_to_model(pre_state, trace_aware=True)
-                own_id = max_player.unique_id
-                max_player = model.get_agent_by_id(own_id)
-                min_player_id = min_player.unique_id
-                min_player = model.get_agent_by_id(min_player_id)
-
-                beta = min(beta, min_move)
-                if alpha >= beta:
-                    break
-            return min_move
-
-    def evaluate_position(self, model, max_player, min_player, depth, tree_path=None,
-                          caching_enabled=False):
-        # use cached value
-        # print("evaluate " + tree_path)
-        if caching_enabled and globals()["cache"] is not None:
-            cache_key = tree_path  # hash_state(state)
-            if cache_key in globals()["cache"]:
-                print("found cached " + tree_path)
-                return globals()["cache"][cache_key]
-        max_depth = self.depth
-
-        if max_player.active and not min_player.active:
-            return float("inf")
-        else:
-            # subtract a high number if agent died (otherwise dying in the last step is as good as survival)
-            if not max_player.active:
-                death_penalty = 1000
+    @staticmethod
+    def update_move_to_make(min_move, move_to_make, action, max_move, alpha):
+        if min_move >= max_move:
+            if min_move == max_move:
+                move_to_make = np.random.choice([move_to_make, action])
             else:
-                death_penalty = 0
-            return -1 * depth - death_penalty
+                move_to_make = action
+            max_move = min_move
+            alpha = max_move
+        return move_to_make, max_move, alpha
+
+    def minimax(self, max_player, min_player, depth, alpha, beta, is_max, model, is_endgame, tree_path):
+        # termination
+        if depth == 0 or not max_player.active or not model.running:
+            return self.evaluate_position(model, max_player, min_player, depth, tree_path)
+
+        # recursion
+        if is_max or is_endgame:
+            return self.max(max_player, min_player, depth, alpha, beta, model, is_endgame, tree_path)
+        else:
+            return self.min(max_player, min_player, depth, alpha, beta, model, is_endgame, tree_path)
+
+    def max(self, max_player, min_player, depth, alpha, beta, model, is_endgame, tree_path):
+        max_move = float("-inf")
+        pre_state = model_to_json(model, trace_aware=True)
+        sorted_action_list = self.init_actions()
+
+        for action in sorted_action_list:
+            tree_path += str(action.value)
+
+            self.update_model(model, max_player, action)
+            max_move = max(max_move, self.minimax(max_player, min_player, depth - 1, alpha, beta, False, model,
+                                                  is_endgame, tree_path))
+            model, max_player, min_player = self.reset_model(pre_state, max_player, min_player)
+
+            alpha = max(alpha, max_move)
+            if alpha >= beta:
+                break
+        return max_move
+
+    def min(self, max_player, min_player, depth, alpha, beta, model, is_endgame, tree_path):
+        min_move = float("inf")
+        pre_state = model_to_json(model, trace_aware=True)
+        sorted_action_list = self.init_actions()
+
+        for action in list(sorted_action_list):
+            tree_path += str(action.value)
+
+            self.update_model(model, min_player, action)
+            min_move = min(min_move, self.minimax(max_player, min_player, depth - 1, alpha, beta, True, model,
+                                                  is_endgame, tree_path))
+            model, max_player, min_player = self.reset_model(pre_state, max_player, min_player)
+
+            beta = min(beta, min_move)
+            if alpha >= beta:
+                break
+        return min_move
+
+    @staticmethod
+    def init_actions():
+        return [Action.CHANGE_NOTHING, Action.TURN_LEFT, Action.TURN_RIGHT, Action.SPEED_UP, Action.SLOW_DOWN]
+
+    @staticmethod
+    def update_model(model, player, action):
+        player.action = action
+        model.step_specific_agent(player)
+
+    @staticmethod
+    def reset_model(pre_state, max_player, min_player):
+        model = state_to_model(pre_state, trace_aware=True)
+        own_id = max_player.unique_id
+        max_player = model.get_agent_by_id(own_id)
+        min_player_id = min_player.unique_id
+        min_player = model.get_agent_by_id(min_player_id)
+        return model, max_player, min_player
+
+    def evaluate_position(self, model, max_player, min_player, depth, tree_path):
+        if self.caching_enabled:
+            print("evaluate " + tree_path)
+            return self.get_cached_result(tree_path)
+
+        sub_evaluations = [self.win_evaluation, self.death_evaluation]
+        weights = [float("inf"), 1]
+        result = self.prioritised_evaluation(sub_evaluations, weights, model, max_player, min_player, depth, tree_path)
+
+        if self.caching_enabled and depth < self.max_cache_depth:
+            self.cache_result(tree_path, result)
+
+        return result
+
+    @staticmethod
+    def get_cached_result(tree_path):
+        cache_key = tree_path  # hash_state(state)
+        if globals()["cache"] is not None and cache_key in globals()["cache"]:
+            print("found cached " + tree_path)
+            return globals()["cache"][cache_key]
+
+    @staticmethod
+    def cache_result(tree_path, result):
+        if globals()["cache"] is not None:
+            globals()["cache"][tree_path] = result
+
+    @staticmethod
+    def win_evaluation(model, max_player, min_player, depth, tree_path):
+        if max_player.active and not min_player.active:
+            return 1
+        else:
+            return None
+
+    @staticmethod
+    def death_evaluation(model, max_player, min_player, depth, tree_path):
+        if not max_player.active:
+            # subtract a high number if agent died (otherwise dying in the last step is as good as survival)
+            death_penalty = 1000
+        else:
+            death_penalty = 0
+        return -depth - death_penalty
+
+    @staticmethod
+    def prioritised_evaluation(sub_evaluations, weights, *args):
+        """
+        Executes sub evaluations prioritized by the given order and multiplies results with the given weights.
+        Each sub evaluation function has to return a evaluation value in range [-1, 1] or None. If the evaluation
+        function returns None, the sub evaluation with the next highest priority will be executed. The evaluation
+        function with the lowest priority has to return an evaluation value (not None).
+        :param sub_evaluations: A list of evaluation functions with the first having the highest priority.
+        :param weights: A list of weights that are multiplied with the respective evaluation values from sub
+                        evaluations.
+        :param args: Arguments that are passed to all sub evaluation functions
+        :return: The overall evaluation value
+        """
+        result = None
+        for i, sub_evaluation in enumerate(sub_evaluations):
+            result = sub_evaluation(*args)
+            if result is not None:
+                return weights[i] * result
+        return result
 
 
 class VoronoiMultiMiniMaxAgent(BaseMultiMiniMaxAgent):
@@ -273,28 +338,22 @@ class VoronoiMultiMiniMaxAgent(BaseMultiMiniMaxAgent):
         self.max_cache_depth = 4
         self.depth = 2
 
-    def evaluate_position(self, model, max_player, min_player, depth, tree_path=None, caching_enabled=False):
-        if caching_enabled and globals()["cache"] is not None:
-            cache_key = tree_path  # hash_state(state)
-            if cache_key in globals()["cache"]:
-                print("found cached " + tree_path)
-                return globals()["cache"][cache_key]
+    def evaluate_position(self, model, max_player, min_player, depth, tree_path):
+        if self.caching_enabled:
+            print("evaluate " + tree_path)
+            return self.get_cached_result(tree_path)
 
-        # weights - all non-weighted evaluation values should be in [-1, 1]
-        # using very large weight gaps is effectively like prioritization
-        kill_weight = float("inf")
-        death_weight = 1000
-        voronoi_region_weight = 1
-        territory_bonus_weight = 0.001  # only used to decide between positions with equal voronoi region evaluation
+        sub_evaluations = [self.win_evaluation, self.death_evaluation, self.voronoi_evaluation]
+        weights = [float("inf"), 1000, 1]
+        result = self.prioritised_evaluation(sub_evaluations, weights, model, max_player, min_player, depth, tree_path)
 
-        # TODO: Bonus points for adjacent battlezones
+        if self.caching_enabled and depth < self.max_cache_depth:
+            self.cache_result(tree_path, result)
 
-        if max_player.active and not min_player.active:
-            utility = kill_weight
-            if caching_enabled and depth < self.max_cache_depth and globals()["cache"] is not None:
-                globals()["cache"][cache_key] = utility  # cache result
-            return utility
-        elif not max_player.active:
+        return result
+
+    def death_evaluation(self, model, max_player, min_player, depth, tree_path):
+        if not max_player.active:
             # TODO: Detect situations where the game is lost if we try to survive but we can force a kamikaze draw.
             #       At the moment the agent would always try to survive one more step and would only kamikaze if death
             #       is inevitable.
@@ -302,43 +361,53 @@ class VoronoiMultiMiniMaxAgent(BaseMultiMiniMaxAgent):
             if not min_player.active:
                 # kamikaze is better than just dying without killing someone else
                 death_eval += 0.1
-            utility = death_eval / self.depth * death_weight
-            if caching_enabled and depth < self.max_cache_depth and globals()["cache"] is not None:
-                globals()["cache"][cache_key] = utility  # cache result
-            return utility
+            return death_eval / self.depth
 
-        voronoi_cells, voronoi_counter, is_endgame = voronoi(model, max_player.unique_id)
-        nb_cells = float(model.width * model.height)  # for normalization
+    def voronoi_evaluation(self, model, max_player, min_player, depth, tree_path):
+        # TODO: Bonus points for adjacent battlezones
 
-        # voronoi region size comparison
+        # only use the territory bonus as a tie breaker between positions with equal voronoi value
+        territory_bonus_weight = 0.0001
+        # for normalization
+        nb_cells = float(model.width * model.height)
+
+        # calculate and compare voronoi region sizes
+        voronoi_cells, max_player_size, min_player_size = self.voronoi_region_sizes(model, max_player, min_player)
+        voronoi_region_points = (max_player_size - min_player_size) / nb_cells
+
+        # calculate territory bonus
+        territory_bonus = self.territory_bonus(model, voronoi_cells, max_player)
+        territory_bonus *= territory_bonus_weight / nb_cells
+
+        return voronoi_region_points + territory_bonus
+
+    @staticmethod
+    def voronoi_region_sizes(model, max_player, min_player):
+        voronoi_cells, voronoi_counter, _ = voronoi(model, max_player.unique_id)
         max_player_size = voronoi_counter[
             max_player.unique_id] if max_player.unique_id in voronoi_counter.keys() else 0
         min_player_size = voronoi_counter[
             min_player.unique_id] if min_player.unique_id in voronoi_counter.keys() else 0
-        voronoi_region_points = (max_player_size - min_player_size) / nb_cells * voronoi_region_weight
+        return voronoi_cells, max_player_size, min_player_size
 
+    def territory_bonus(self, model, voronoi_cells, max_player):
         territory_bonus = 0
         for x in range(model.width):
             for y in range(model.height):
                 if voronoi_cells[y, x, 0] == max_player.unique_id:
-                    territory_bonus += add_territory_bonus(model, x, y)
-        territory_bonus *= territory_bonus_weight / nb_cells
+                    territory_bonus += self.cell_territory_bonus(model, x, y)
+        return territory_bonus
 
-        utility = voronoi_region_points + territory_bonus
-        if caching_enabled and depth < self.max_cache_depth and globals()["cache"] is not None:
-            globals()["cache"][cache_key] = utility  # cache result
-        return utility
+    @staticmethod
+    def cell_territory_bonus(model, x, y):
+        territory_bonus = 0.25
+        bonus = 0
+        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        for d_x, d_y in directions:
+            if 0 <= x + d_x < model.width and 0 <= y + d_y < model.height and model.cells[y + d_y, x + d_x] == 0:
+                bonus += territory_bonus
 
-
-def add_territory_bonus(model, x, y):
-    territory_bonus = 0.25
-    bonus = 0
-    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-    for d_x, d_y in directions:
-        if 0 <= x + d_x < model.width and 0 <= y + d_y < model.height and model.cells[y + d_y, x + d_x] == 0:
-            bonus += territory_bonus
-
-    return bonus
+        return bonus
 
 
 class ReduceOpponentsVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
@@ -352,55 +421,16 @@ class ReduceOpponentsVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
         self.max_cache_depth = 4
         self.depth = 2
 
-    def multi_minimax(self, depth, game_state):
-        model = state_to_model(game_state)
-        own_id = game_state["you"]
-        _, _, is_endgame = voronoi(model, own_id)
-        max_player = model.get_agent_by_id(own_id)
-        min_player_ids = list(map(lambda a: a.unique_id, model.active_speed_agents))
-        min_player_ids.remove(own_id)
-        min_player_ids.sort(key=lambda id: distance.euclidean(model.get_agent_by_id(id).pos, max_player.pos), reverse=True)
+    def init_multi_minimax(self, game_state):
+        model, max_player, min_player_ids, is_endgame, move_to_make, max_move, alpha, actions = \
+            super().init_multi_minimax(game_state)
+
+        min_player_ids.sort(key=lambda i: distance.euclidean(model.get_agent_by_id(i).pos, max_player.pos),
+                            reverse=True)
         if len(min_player_ids) >= 2:
             min_player_ids = min_player_ids[-2:]
 
-        move_to_make = Action.CHANGE_NOTHING
-        max_move = float("-inf")
-        alpha = float("-inf")
-        sorted_action_list = [Action.CHANGE_NOTHING, Action.TURN_LEFT, Action.TURN_RIGHT, Action.SPEED_UP, Action.SLOW_DOWN]
-        for action in sorted_action_list:
-            if max_player.speed == 1 and action == Action.SLOW_DOWN:
-                continue
-            if max_player.speed == 10 and action == Action.SPEED_UP:
-                continue
-            pre_state = model_to_json(model, trace_aware=True)
-            max_player.action = action
-            model.step_specific_agent(max_player)
-            tree_path = str(action.value)
-            min_move = float("inf")
-            beta = float("inf")
-            for opponent_id in min_player_ids:
-                opponent = model.get_agent_by_id(opponent_id)
-
-                min_move = min(min_move, self.minimax(max_player, opponent, depth - 1, alpha, beta, False,
-                                                      model, is_endgame, tree_path=tree_path))
-
-                model = state_to_model(pre_state, trace_aware=True)
-                max_player = model.get_agent_by_id(own_id)
-                beta = min_move
-
-                if alpha >= beta:
-                    break
-                if is_endgame:
-                    break
-
-            if min_move >= max_move:
-                if min_move == max_move:
-                    move_to_make = np.random.choice([move_to_make, action])
-                else:
-                    move_to_make = action
-                max_move = min_move
-                alpha = max_move
-        return move_to_make
+        return model, max_player, min_player_ids, is_endgame, move_to_make, max_move, alpha, actions
 
 
 class LiveAgent(ReduceOpponentsVoronoiMultiMiniMaxAgent):
