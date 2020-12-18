@@ -113,14 +113,18 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
     """
     Agent that chooses an action based on the multi minimax algorithm
     """
-    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=1):
+    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=1, caching_enabled=False):
         super().__init__(model, pos, direction, speed, active)
         self.time_for_move = time_for_move
-        self.max_cache_depth = 4
         self.depth = 2
+        self.caching_enabled = caching_enabled
+        if caching_enabled:
+            self.max_cache_depth = 4
+            self.tree_path = None
 
     def act(self, state):
-        globals()["cache"] = dict()  # defaultdict(int)
+        if self.caching_enabled:
+            globals()["cache"] = dict()  # defaultdict(int)
 
         move = multiprocessing.Value('i', 4)
         reached_depth = multiprocessing.Value('i', 0)
@@ -129,9 +133,8 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
         p.start()
         p.join(self.time_for_move)
 
-        # If thread is active
+        # Force termination
         if p.is_alive():
-            # Terminate foo
             p.terminate()
             p.join()
 
@@ -147,6 +150,21 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
             self.depth += 1
 
     def multi_minimax(self, depth, game_state):
+        model, max_player, min_player_ids, is_endgame, move_to_make, max_move, alpha, actions = \
+            self.init_multi_minimax(game_state)
+        for action in reversed(actions):
+            tree_path = str(action.value)
+            pre_state = model_to_json(model, trace_aware=True)
+            self.update_model(model, max_player, action)
+            min_move = float("inf")
+
+            model, max_player, min_move, alpha = self.move_min_players(model, max_player, min_player_ids, min_move,
+                                                                       depth, alpha, is_endgame, tree_path, pre_state)
+            move_to_make, max_move, alpha = self.update_move_to_make(move_to_make, action, min_move, max_move, alpha)
+
+        return move_to_make
+
+    def init_multi_minimax(self, game_state):
         model = state_to_model(game_state)
         own_id = game_state["you"]
         _, _, is_endgame = voronoi(model, own_id)
@@ -157,100 +175,102 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
         move_to_make = Action.CHANGE_NOTHING
         max_move = float("-inf")
         alpha = float("-inf")
-        copy_actions = copy.deepcopy(list(Action))
-        for action in reversed(copy_actions):
-            if max_player.speed == 1 and action == Action.SLOW_DOWN:
-                continue
-            if max_player.speed == 10 and action == Action.SPEED_UP:
-                continue
-            pre_state = model_to_json(model, trace_aware=True)
-            max_player.action = action
-            model.step_specific_agent(max_player)
-            tree_path = str(action.value)
-            min_move = float("inf")
-            beta = float("inf")
-            for opponent_id in min_player_ids:
-                opponent = model.get_agent_by_id(opponent_id)
+        actions = self.init_actions()
+        return model, max_player, min_player_ids, is_endgame, move_to_make, max_move, alpha, actions
 
-                min_move = min(min_move, self.minimax(max_player, opponent, depth - 1, alpha, beta, False,
-                                                      model, is_endgame, tree_path=tree_path))
+    def move_min_players(self, model, max_player, min_player_ids, min_move, depth, alpha, is_endgame, tree_path, pre_state):
+        beta = float("inf")
+        for min_player_id in min_player_ids:
+            min_player = model.get_agent_by_id(min_player_id)
+            min_move = min(min_move, self.minimax(max_player, min_player, depth - 1, alpha, beta, False, model,
+                                                  is_endgame, tree_path))
+            model, max_player, _ = self.reset_model(pre_state, max_player, min_player)
 
-                model = state_to_model(pre_state, trace_aware=True)
-                max_player = model.get_agent_by_id(own_id)
-                beta = min_move
+            beta = min_move
+            if alpha >= beta or is_endgame:
+                break
+        return model, max_player, min_move, alpha
 
-                if alpha >= beta:
-                    break
-                if is_endgame:
-                    break
+    @staticmethod
+    def update_move_to_make(min_move, move_to_make, action, max_move, alpha):
+        if min_move >= max_move:
+            if min_move == max_move:
+                move_to_make = np.random.choice([move_to_make, action])
+            else:
+                move_to_make = action
+            max_move = min_move
+            alpha = max_move
+        return move_to_make, max_move, alpha
 
-            if min_move >= max_move:
-                if min_move == max_move:
-                    move_to_make = np.random.choice([move_to_make, action])
-                else:
-                    move_to_make = action
-                max_move = min_move
-                alpha = max_move
-        return move_to_make
-
-    def minimax(self, max_player, min_player, depth, alpha, beta, is_max, model, is_endgame, tree_path=None):
+    def minimax(self, max_player, min_player, depth, alpha, beta, is_max, model, is_endgame, tree_path):
+        # termination
         if depth == 0 or not max_player.active or not model.running:
-            return self.evaluate_position(model, max_player, min_player, depth, tree_path=tree_path)
+            return self.evaluate_position(model, max_player, min_player, depth, tree_path)
+
+        # recursion
         if is_max or is_endgame:
-            max_move = float("-inf")
-            pre_state = model_to_json(model, trace_aware=True)
-            sorted_action_list = [Action.CHANGE_NOTHING, Action.TURN_LEFT, Action.TURN_RIGHT, Action.SPEED_UP, Action.SLOW_DOWN]
-            for action in sorted_action_list:
-                max_player.action = action
-                model.step_specific_agent(max_player)
-                tree_path += str(action.value)
-
-                max_move = max(max_move, self.minimax(max_player, min_player, depth - 1, alpha, beta, False,
-                                                      model, is_endgame, tree_path=tree_path))
-
-                model = state_to_model(pre_state, trace_aware=True)
-                own_id = max_player.unique_id
-                max_player = model.get_agent_by_id(own_id)
-                min_player_id = min_player.unique_id
-                min_player = model.get_agent_by_id(min_player_id)
-
-                alpha = max(alpha, max_move)
-                if alpha >= beta:
-                    break
-            return max_move
+            return self.max(max_player, min_player, depth, alpha, beta, model, is_endgame, tree_path)
         else:
-            min_move = float("inf")
-            pre_state = model_to_json(model, trace_aware=True)
-            sorted_action_list = [Action.CHANGE_NOTHING, Action.TURN_LEFT, Action.TURN_RIGHT, Action.SPEED_UP, Action.SLOW_DOWN]
-            for action in list(sorted_action_list):
-                min_player.action = action
-                model.step_specific_agent(min_player)
-                tree_path += str(action.value)
+            return self.min(max_player, min_player, depth, alpha, beta, model, is_endgame, tree_path)
 
-                min_move = min(min_move, self.minimax(max_player, min_player, depth - 1, alpha, beta, True,
-                                                      model, is_endgame, tree_path=tree_path))
+    def max(self, max_player, min_player, depth, alpha, beta, model, is_endgame, tree_path):
+        max_move = float("-inf")
+        pre_state = model_to_json(model, trace_aware=True)
+        sorted_action_list = self.init_actions()
 
-                model = state_to_model(pre_state, trace_aware=True)
-                own_id = max_player.unique_id
-                max_player = model.get_agent_by_id(own_id)
-                min_player_id = min_player.unique_id
-                min_player = model.get_agent_by_id(min_player_id)
+        for action in sorted_action_list:
+            tree_path += str(action.value)
 
-                beta = min(beta, min_move)
-                if alpha >= beta:
-                    break
-            return min_move
+            self.update_model(model, max_player, action)
+            max_move = max(max_move, self.minimax(max_player, min_player, depth - 1, alpha, beta, False, model,
+                                                  is_endgame, tree_path))
+            self.reset_model(pre_state, max_player, min_player)
 
-    def evaluate_position(self, model, max_player, min_player, depth, tree_path=None,
-                          caching_enabled=False):
-        # use cached value
-        # print("evaluate " + tree_path)
-        if caching_enabled and globals()["cache"] is not None:
-            cache_key = tree_path  # hash_state(state)
-            if cache_key in globals()["cache"]:
-                print("found cached " + tree_path)
-                return globals()["cache"][cache_key]
-        max_depth = self.depth
+            alpha = max(alpha, max_move)
+            if alpha >= beta:
+                break
+        return max_move
+
+    def min(self, max_player, min_player, depth, alpha, beta, model, is_endgame, tree_path):
+        min_move = float("inf")
+        pre_state = model_to_json(model, trace_aware=True)
+        sorted_action_list = self.init_actions()
+
+        for action in list(sorted_action_list):
+            tree_path += str(action.value)
+
+            self.update_model(model, min_player, action)
+            min_move = min(min_move, self.minimax(max_player, min_player, depth - 1, alpha, beta, True, model,
+                                                  is_endgame, tree_path))
+            self.reset_model(pre_state, max_player, min_player)
+
+            beta = min(beta, min_move)
+            if alpha >= beta:
+                break
+        return min_move
+
+    @staticmethod
+    def init_actions():
+        return [Action.CHANGE_NOTHING, Action.TURN_LEFT, Action.TURN_RIGHT, Action.SPEED_UP, Action.SLOW_DOWN]
+
+    @staticmethod
+    def update_model(model, player, action):
+        player.action = action
+        model.step_specific_agent(player)
+
+    @staticmethod
+    def reset_model(pre_state, max_player, min_player):
+        model = state_to_model(pre_state, trace_aware=True)
+        own_id = max_player.unique_id
+        max_player = model.get_agent_by_id(own_id)
+        min_player_id = min_player.unique_id
+        min_player = model.get_agent_by_id(min_player_id)
+        return model, max_player, min_player
+
+    def evaluate_position(self, model, max_player, min_player, depth, tree_path):
+        if self.caching_enabled and globals()["cache"] is not None:
+            print("evaluate " + tree_path)
+            return self.evaluation_caching(tree_path)
 
         if max_player.active and not min_player.active:
             return float("inf")
@@ -260,8 +280,14 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
                 death_penalty = 1000
             else:
                 death_penalty = 0
-            return -1 * depth - death_penalty
+            return -depth - death_penalty
 
+    @staticmethod
+    def evaluation_caching(tree_path):
+        cache_key = tree_path  # hash_state(state)
+        if cache_key in globals()["cache"]:
+            print("found cached " + tree_path)
+            return globals()["cache"][cache_key]
 
 class VoronoiMultiMiniMaxAgent(BaseMultiMiniMaxAgent):
     """
