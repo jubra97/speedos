@@ -152,7 +152,7 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
     def multi_minimax(self, depth, game_state):
         model, max_player, min_player_ids, is_endgame, move_to_make, max_move, alpha, actions = \
             self.init_multi_minimax(game_state)
-        for action in reversed(actions):
+        for action in actions:
             tree_path = str(action.value)
             pre_state = model_to_json(model, trace_aware=True)
             self.update_model(model, max_player, action)
@@ -224,7 +224,7 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
             self.update_model(model, max_player, action)
             max_move = max(max_move, self.minimax(max_player, min_player, depth - 1, alpha, beta, False, model,
                                                   is_endgame, tree_path))
-            self.reset_model(pre_state, max_player, min_player)
+            model, max_player, min_player = self.reset_model(pre_state, max_player, min_player)
 
             alpha = max(alpha, max_move)
             if alpha >= beta:
@@ -242,7 +242,7 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
             self.update_model(model, min_player, action)
             min_move = min(min_move, self.minimax(max_player, min_player, depth - 1, alpha, beta, True, model,
                                                   is_endgame, tree_path))
-            self.reset_model(pre_state, max_player, min_player)
+            model, max_player, min_player = self.reset_model(pre_state, max_player, min_player)
 
             beta = min(beta, min_move)
             if alpha >= beta:
