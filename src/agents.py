@@ -378,55 +378,16 @@ class ReduceOpponentsVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
         self.max_cache_depth = 4
         self.depth = 2
 
-    def multi_minimax(self, depth, game_state):
-        model = state_to_model(game_state)
-        own_id = game_state["you"]
-        _, _, is_endgame = voronoi(model, own_id)
-        max_player = model.get_agent_by_id(own_id)
-        min_player_ids = list(map(lambda a: a.unique_id, model.active_speed_agents))
-        min_player_ids.remove(own_id)
-        min_player_ids.sort(key=lambda id: distance.euclidean(model.get_agent_by_id(id).pos, max_player.pos), reverse=True)
+    def init_multi_minimax(self, game_state):
+        model, max_player, min_player_ids, is_endgame, move_to_make, max_move, alpha, actions = \
+            super().init_multi_minimax(game_state)
+
+        min_player_ids.sort(key=lambda i: distance.euclidean(model.get_agent_by_id(i).pos, max_player.pos),
+                            reverse=True)
         if len(min_player_ids) >= 2:
             min_player_ids = min_player_ids[-2:]
 
-        move_to_make = Action.CHANGE_NOTHING
-        max_move = float("-inf")
-        alpha = float("-inf")
-        sorted_action_list = [Action.CHANGE_NOTHING, Action.TURN_LEFT, Action.TURN_RIGHT, Action.SPEED_UP, Action.SLOW_DOWN]
-        for action in sorted_action_list:
-            if max_player.speed == 1 and action == Action.SLOW_DOWN:
-                continue
-            if max_player.speed == 10 and action == Action.SPEED_UP:
-                continue
-            pre_state = model_to_json(model, trace_aware=True)
-            max_player.action = action
-            model.step_specific_agent(max_player)
-            tree_path = str(action.value)
-            min_move = float("inf")
-            beta = float("inf")
-            for opponent_id in min_player_ids:
-                opponent = model.get_agent_by_id(opponent_id)
-
-                min_move = min(min_move, self.minimax(max_player, opponent, depth - 1, alpha, beta, False,
-                                                      model, is_endgame, tree_path=tree_path))
-
-                model = state_to_model(pre_state, trace_aware=True)
-                max_player = model.get_agent_by_id(own_id)
-                beta = min_move
-
-                if alpha >= beta:
-                    break
-                if is_endgame:
-                    break
-
-            if min_move >= max_move:
-                if min_move == max_move:
-                    move_to_make = np.random.choice([move_to_make, action])
-                else:
-                    move_to_make = action
-                max_move = min_move
-                alpha = max_move
-        return move_to_make
+        return model, max_player, min_player_ids, is_endgame, move_to_make, max_move, alpha, actions
 
 
 class LiveAgent(ReduceOpponentsVoronoiMultiMiniMaxAgent):
