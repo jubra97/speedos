@@ -5,13 +5,11 @@ from itertools import permutations
 import numpy as np
 import requests
 from pynput import keyboard
+from scipy.spatial import distance
 
 from src.model import SpeedAgent
 from src.utils import Action, get_state, arg_maxes, state_to_model, model_to_json
 from src.voronoi import voronoi
-import numpy as np
-import copy
-from scipy.spatial import distance
 
 
 class AgentDummy(SpeedAgent):
@@ -268,20 +266,30 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
         return model, max_player, min_player
 
     def evaluate_position(self, model, max_player, min_player, depth, tree_path):
-        if self.caching_enabled and globals()["cache"] is not None:
+        if self.caching_enabled:
             print("evaluate " + tree_path)
-            return self.evaluation_caching(tree_path)
+            return self.get_cached_result(tree_path)
 
         sub_evaluations = [self.win_evaluation, self.death_evaluation]
         weights = [float("inf"), 1]
-        return self.prioritised_evaluation(sub_evaluations, weights, model, max_player, min_player, depth, tree_path)
+        result = self.prioritised_evaluation(sub_evaluations, weights, model, max_player, min_player, depth, tree_path)
+
+        if self.caching_enabled and depth < self.max_cache_depth:
+            self.cache_result(tree_path, result)
+
+        return result
 
     @staticmethod
-    def evaluation_caching(tree_path):
+    def get_cached_result(tree_path):
         cache_key = tree_path  # hash_state(state)
-        if cache_key in globals()["cache"]:
+        if globals()["cache"] is not None and cache_key in globals()["cache"]:
             print("found cached " + tree_path)
             return globals()["cache"][cache_key]
+
+    @staticmethod
+    def cache_result(tree_path, result):
+        if globals()["cache"] is not None:
+            globals()["cache"][tree_path] = result
 
     @staticmethod
     def win_evaluation(model, max_player, min_player, depth, tree_path):
@@ -330,26 +338,22 @@ class VoronoiMultiMiniMaxAgent(BaseMultiMiniMaxAgent):
         self.max_cache_depth = 4
         self.depth = 2
 
-    def evaluate_position(self, model, max_player, min_player, depth, tree_path=None, caching_enabled=False):
-        if self.caching_enabled and globals()["cache"] is not None:
+    def evaluate_position(self, model, max_player, min_player, depth, tree_path):
+        if self.caching_enabled:
             print("evaluate " + tree_path)
-            return self.evaluation_caching(tree_path)
+            return self.get_cached_result(tree_path)
 
-        # weights - all non-weighted evaluation values should be in [-1, 1]
-        # using very large weight gaps is effectively like prioritization
-        kill_weight = float("inf")
-        death_weight = 1000
-        voronoi_region_weight = 1
-        territory_bonus_weight = 0.001  # only used to decide between positions with equal voronoi region evaluation
+        sub_evaluations = [self.win_evaluation, self.death_evaluation, self.voronoi_evaluation]
+        weights = [float("inf"), 1000, 1]
+        result = self.prioritised_evaluation(sub_evaluations, weights, model, max_player, min_player, depth, tree_path)
 
-        # TODO: Bonus points for adjacent battlezones
+        if self.caching_enabled and depth < self.max_cache_depth:
+            self.cache_result(tree_path, result)
 
-        if max_player.active and not min_player.active:
-            utility = kill_weight
-            if caching_enabled and depth < self.max_cache_depth and globals()["cache"] is not None:
-                globals()["cache"][cache_key] = utility  # cache result
-            return utility
-        elif not max_player.active:
+        return result
+
+    def death_evaluation(self, model, max_player, min_player, depth, tree_path):
+        if not max_player.active:
             # TODO: Detect situations where the game is lost if we try to survive but we can force a kamikaze draw.
             #       At the moment the agent would always try to survive one more step and would only kamikaze if death
             #       is inevitable.
@@ -357,43 +361,53 @@ class VoronoiMultiMiniMaxAgent(BaseMultiMiniMaxAgent):
             if not min_player.active:
                 # kamikaze is better than just dying without killing someone else
                 death_eval += 0.1
-            utility = death_eval / self.depth * death_weight
-            if caching_enabled and depth < self.max_cache_depth and globals()["cache"] is not None:
-                globals()["cache"][cache_key] = utility  # cache result
-            return utility
+            return death_eval / self.depth
 
-        voronoi_cells, voronoi_counter, is_endgame = voronoi(model, max_player.unique_id)
-        nb_cells = float(model.width * model.height)  # for normalization
+    def voronoi_evaluation(self, model, max_player, min_player, depth, tree_path):
+        # TODO: Bonus points for adjacent battlezones
 
-        # voronoi region size comparison
+        # only use the territory bonus as a tie breaker between positions with equal voronoi value
+        territory_bonus_weight = 0.0001
+        # for normalization
+        nb_cells = float(model.width * model.height)
+
+        # calculate and compare voronoi region sizes
+        voronoi_cells, max_player_size, min_player_size = self.voronoi_region_sizes(model, max_player, min_player)
+        voronoi_region_points = (max_player_size - min_player_size) / nb_cells
+
+        # calculate territory bonus
+        territory_bonus = self.territory_bonus(model, voronoi_cells, max_player)
+        territory_bonus *= territory_bonus_weight / nb_cells
+
+        return voronoi_region_points + territory_bonus
+
+    @staticmethod
+    def voronoi_region_sizes(model, max_player, min_player):
+        voronoi_cells, voronoi_counter, _ = voronoi(model, max_player.unique_id)
         max_player_size = voronoi_counter[
             max_player.unique_id] if max_player.unique_id in voronoi_counter.keys() else 0
         min_player_size = voronoi_counter[
             min_player.unique_id] if min_player.unique_id in voronoi_counter.keys() else 0
-        voronoi_region_points = (max_player_size - min_player_size) / nb_cells * voronoi_region_weight
+        return voronoi_cells, max_player_size, min_player_size
 
+    def territory_bonus(self, model, voronoi_cells, max_player):
         territory_bonus = 0
         for x in range(model.width):
             for y in range(model.height):
                 if voronoi_cells[y, x, 0] == max_player.unique_id:
-                    territory_bonus += add_territory_bonus(model, x, y)
-        territory_bonus *= territory_bonus_weight / nb_cells
+                    territory_bonus += self.cell_territory_bonus(model, x, y)
+        return territory_bonus
 
-        utility = voronoi_region_points + territory_bonus
-        if caching_enabled and depth < self.max_cache_depth and globals()["cache"] is not None:
-            globals()["cache"][cache_key] = utility  # cache result
-        return utility
+    @staticmethod
+    def cell_territory_bonus(model, x, y):
+        territory_bonus = 0.25
+        bonus = 0
+        directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        for d_x, d_y in directions:
+            if 0 <= x + d_x < model.width and 0 <= y + d_y < model.height and model.cells[y + d_y, x + d_x] == 0:
+                bonus += territory_bonus
 
-
-def add_territory_bonus(model, x, y):
-    territory_bonus = 0.25
-    bonus = 0
-    directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-    for d_x, d_y in directions:
-        if 0 <= x + d_x < model.width and 0 <= y + d_y < model.height and model.cells[y + d_y, x + d_x] == 0:
-            bonus += territory_bonus
-
-    return bonus
+        return bonus
 
 
 class ReduceOpponentsVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
