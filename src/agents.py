@@ -160,7 +160,7 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
 
             model, max_player, min_move, alpha = self.move_min_players(model, max_player, min_player_ids, min_move,
                                                                        depth, alpha, is_endgame, tree_path, pre_state)
-            move_to_make, max_move, alpha = self.update_move_to_make(move_to_make, action, min_move, max_move, alpha)
+            move_to_make, max_move, alpha = self.update_move_to_make(min_move, move_to_make, action, max_move, alpha)
 
         return move_to_make
 
@@ -272,15 +272,9 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
             print("evaluate " + tree_path)
             return self.evaluation_caching(tree_path)
 
-        if max_player.active and not min_player.active:
-            return float("inf")
-        else:
-            # subtract a high number if agent died (otherwise dying in the last step is as good as survival)
-            if not max_player.active:
-                death_penalty = 1000
-            else:
-                death_penalty = 0
-            return -depth - death_penalty
+        sub_evaluations = [self.win_evaluation, self.death_evaluation]
+        weights = [float("inf"), 1]
+        return self.prioritised_evaluation(sub_evaluations, weights, model, max_player, min_player, depth, tree_path)
 
     @staticmethod
     def evaluation_caching(tree_path):
@@ -288,6 +282,43 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
         if cache_key in globals()["cache"]:
             print("found cached " + tree_path)
             return globals()["cache"][cache_key]
+
+    @staticmethod
+    def win_evaluation(model, max_player, min_player, depth, tree_path):
+        if max_player.active and not min_player.active:
+            return 1
+        else:
+            return None
+
+    @staticmethod
+    def death_evaluation(model, max_player, min_player, depth, tree_path):
+        if not max_player.active:
+            # subtract a high number if agent died (otherwise dying in the last step is as good as survival)
+            death_penalty = 1000
+        else:
+            death_penalty = 0
+        return -depth - death_penalty
+
+    @staticmethod
+    def prioritised_evaluation(sub_evaluations, weights, *args):
+        """
+        Executes sub evaluations prioritized by the given order and multiplies results with the given weights.
+        Each sub evaluation function has to return a evaluation value in range [-1, 1] or None. If the evaluation
+        function returns None, the sub evaluation with the next highest priority will be executed. The evaluation
+        function with the lowest priority has to return an evaluation value (not None).
+        :param sub_evaluations: A list of evaluation functions with the first having the highest priority.
+        :param weights: A list of weights that are multiplied with the respective evaluation values from sub
+                        evaluations.
+        :param args: Arguments that are passed to all sub evaluation functions
+        :return: The overall evaluation value
+        """
+        result = None
+        for i, sub_evaluation in enumerate(sub_evaluations):
+            result = sub_evaluation(*args)
+            if result is not None:
+                return weights[i] * result
+        return result
+
 
 class VoronoiMultiMiniMaxAgent(BaseMultiMiniMaxAgent):
     """
@@ -300,11 +331,9 @@ class VoronoiMultiMiniMaxAgent(BaseMultiMiniMaxAgent):
         self.depth = 2
 
     def evaluate_position(self, model, max_player, min_player, depth, tree_path=None, caching_enabled=False):
-        if caching_enabled and globals()["cache"] is not None:
-            cache_key = tree_path  # hash_state(state)
-            if cache_key in globals()["cache"]:
-                print("found cached " + tree_path)
-                return globals()["cache"][cache_key]
+        if self.caching_enabled and globals()["cache"] is not None:
+            print("evaluate " + tree_path)
+            return self.evaluation_caching(tree_path)
 
         # weights - all non-weighted evaluation values should be in [-1, 1]
         # using very large weight gaps is effectively like prioritization
