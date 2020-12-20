@@ -2,10 +2,10 @@ from src.agents import NStepSurvivalAgent, RandomAgent
 from src.evaluation.utils import Evaluator
 
 model_params = {
-    "width": 10,
-    "height": 10,
-    "nb_agents": 2,
-    "agent_classes": [NStepSurvivalAgent, RandomAgent],
+    "width": 20,
+    "height": 20,
+    "nb_agents": 3,
+    "agent_classes": [NStepSurvivalAgent, NStepSurvivalAgent, NStepSurvivalAgent],
 }
 evaluator = Evaluator(model_params)
-evaluator.evaluate(100, save=True)
+evaluator.fair_start_evaluate(2, save=True)

@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 
 from src.model import SpeedModel
+from src.utils import Direction
+import random
 
 
 class Evaluator:
@@ -28,6 +30,26 @@ class Evaluator:
             self.model.run_model()
             self._update_tables(rep)
         self._process_results(repetitions, show, save)
+
+    def fair_start_evaluate(self, repetitions, seeds=None, show=True, save=False):
+        self._init_tables(repetitions * self.model_params["nb_agents"])
+        for rep in range(repetitions):
+            start_pos = [
+                (random.randrange(0, self.model_params["width"]), random.randrange(0, self.model_params["height"])) for
+                _ in range(self.model_params["nb_agents"])]
+            start_dir = [random.choice(list(Direction)) for _ in range(self.model_params["nb_agents"])]
+            for i in range(self.model_params["nb_agents"]):
+                args = [{"pos": start_pos[j % self.model_params["nb_agents"]],
+                         "direction": start_dir[j % self.model_params["nb_agents"]]} for j in
+                        range(i, self.model_params["nb_agents"] + i)]
+                self.model_params["initial_agents_params"] = args
+
+                self.model = SpeedModel(**self.model_params)
+                if seeds is not None:
+                    self.model.reset_randomizer(seeds[rep])
+                self.model.run_model()
+                self._update_tables(rep)
+        self._process_results(repetitions * self.model_params["nb_agents"], show, save)
 
     def _process_results(self, repetitions, show, save):
         if not show and not save:
@@ -66,7 +88,7 @@ class Evaluator:
             "Repetitions": repetitions
         }
         if self.parameter_settings_info:
-            parameter_settings = {**parameter_settings, **self.parameter_settings_info} # join the dicts
+            parameter_settings = {**parameter_settings, **self.parameter_settings_info}  # join the dicts
         parameter_settings_df = pd.DataFrame(parameter_settings, index=["Data"])
 
         timestamp = datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
