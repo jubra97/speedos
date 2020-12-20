@@ -8,4 +8,4 @@ model_params = {
     "agent_classes": [NStepSurvivalAgent, NStepSurvivalAgent, NStepSurvivalAgent],
 }
 evaluator = Evaluator(model_params)
-evaluator.fair_start_evaluate(2, save=True)
+evaluator.fair_start_evaluate(3, save=True)

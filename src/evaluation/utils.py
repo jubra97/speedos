@@ -32,8 +32,12 @@ class Evaluator:
         self._process_results(repetitions, show, save)
 
     def fair_start_evaluate(self, repetitions, seeds=None, show=True, save=False):
-        self._init_tables(repetitions * self.model_params["nb_agents"])
-        for rep in range(repetitions):
+        if repetitions % self.model_params["nb_agents"]:
+            raise ValueError("Repetitions must be multiple of nb_agents")
+        else:
+            repetitions_to_iter = int(repetitions / self.model_params["nb_agents"])
+        self._init_tables(repetitions)
+        for rep in range(repetitions_to_iter):
             start_pos = [
                 (random.randrange(0, self.model_params["width"]), random.randrange(0, self.model_params["height"])) for
                 _ in range(self.model_params["nb_agents"])]
@@ -48,8 +52,8 @@ class Evaluator:
                 if seeds is not None:
                     self.model.reset_randomizer(seeds[rep])
                 self.model.run_model()
-                self._update_tables(rep)
-        self._process_results(repetitions * self.model_params["nb_agents"], show, save)
+                self._update_tables(rep + i)
+        self._process_results(repetitions, show, save)
 
     def _process_results(self, repetitions, show, save):
         if not show and not save:
