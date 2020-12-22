@@ -1,6 +1,7 @@
 import copy
 import datetime
 import multiprocessing
+import time
 from itertools import permutations
 
 import numpy as np
@@ -342,48 +343,53 @@ class MultiprocessedDepthMultiMiniMax(BaseMultiMiniMaxAgent):
         self.time_for_move = time_for_move
         self.max_cache_depth = 4
         self.depth = 2
+        self.move_to_make = 4
 
     def act(self, state):
-        if self.caching_enabled:
-            globals()["cache"] = dict()  # defaultdict(int)
-
-        move = multiprocessing.Value('i', 4)
-        reached_depth = multiprocessing.Value('i', 0)
-        # self.depth_first_iterative_deepening(move, reached_depth, state)
-        p = multiprocessing.Process(target=self.depth_first_iterative_deepening, name="DFID",
-                                    args=(move, reached_depth, state))
-        p.start()
-        p.join(self.time_for_move)
-
-        # Force termination
-        if p.is_alive():
-            p.terminate()
-            p.join()
-
-        print(f"reached_depth: {reached_depth.value}")
-
-        return Action(move.value)
-
-    def depth_first_iterative_deepening(self, shared_move_var, shared_dep, game_state):
+        # if self.caching_enabled:
+        #     globals()["cache"] = dict()  # defaultdict(int)
+        #
+        # move = multiprocessing.Value('i', 4)
+        # reached_depth = multiprocessing.Value('i', 0)
+        # # self.depth_first_iterative_deepening(move, reached_depth, state)
         # pool = multiprocessing.Pool()
-        processes = [None] * 8
-        for depth in range(1, 7):  # canceled from outside
-            #   pool.apply_async(self.depth_first_iterative_deepening_one_depth,
-            #                   (shared_move_var, shared_dep, copy.deepcopy(game_state), depth))
-            processes[depth] = multiprocessing.Process(target=self.depth_first_iterative_deepening_one_depth, args=(
-            shared_move_var, shared_dep, copy.deepcopy(game_state), depth))
-            processes[depth].start()
-            processes[depth].join()
-        # print(depth)
-        # pool.close()
-        # pool.join()
+        # p = multiprocessing.Process(target=self.depth_first_iterative_deepening, name="DFID",
+        #                             args=(move, reached_depth, state, pool))
+        # # p.daemon = True
+        # p.start()
+        # p.join(self.time_for_move)
+        #
+        # # Force termination
+        # if p.is_alive():
+        #     pool.terminate()
+        #     pool.join()
+        #     p.terminate()
+        #     p.join()
+        #
+        # print(f"reached_depth: {reached_depth.value}")
+        #
+        # return Action(move.value)
+        self.depth = 2
+        self.depth_first_iterative_deepening(state, self.time_for_move)
 
-    def depth_first_iterative_deepening_one_depth(self, shared_move_var, shared_dep, game_state, depth):
-        print(depth)
+
+    def depth_first_iterative_deepening(self, game_state, time_for_move):
+        def compare_depth(result):
+            print(result)
+            if result["depth"] >= self.depth:
+                self.depth = result["depth"]
+                self.move_to_make = result["move_to_make"]
+
+        p = multiprocessing.Pool()
+        [p.apply_async(self.depth_first_iterative_deepening_one_depth, (game_state, depth), callback=compare_depth)
+         for depth in range(self.depth, 20)]
+        time.sleep(time_for_move)
+        p.terminate()
+
+    def depth_first_iterative_deepening_one_depth(self, game_state, depth):
         move_to_make = self.multi_minimax(depth, game_state)
-        if shared_dep.value < depth:
-            shared_move_var.value = move_to_make.value
-            shared_dep.value = depth
+        print(depth)
+        return {"depth": depth, "move_to_make": move_to_make.value}
 
 
 class VoronoiMultiMiniMaxAgent(BaseMultiMiniMaxAgent):
@@ -468,6 +474,63 @@ class VoronoiMultiMiniMaxAgent(BaseMultiMiniMaxAgent):
 
         return bonus
 
+class MultiVoronoiMultiMiniMax(VoronoiMultiMiniMaxAgent):
+
+    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=5):
+        super().__init__(model, pos, direction, speed, active, time_for_move)
+        self.time_for_move = time_for_move
+        self.max_cache_depth = 4
+        self.depth = 2
+        self.move_to_make = 4
+
+    def act(self, state):
+        # if self.caching_enabled:
+        #     globals()["cache"] = dict()  # defaultdict(int)
+        #
+        # move = multiprocessing.Value('i', 4)
+        # reached_depth = multiprocessing.Value('i', 0)
+        # # self.depth_first_iterative_deepening(move, reached_depth, state)
+        # pool = multiprocessing.Pool()
+        # p = multiprocessing.Process(target=self.depth_first_iterative_deepening, name="DFID",
+        #                             args=(move, reached_depth, state, pool))
+        # # p.daemon = True
+        # p.start()
+        # p.join(self.time_for_move)
+        #
+        # # Force termination
+        # if p.is_alive():
+        #     pool.terminate()
+        #     pool.join()
+        #     p.terminate()
+        #     p.join()
+        #
+        # print(f"reached_depth: {reached_depth.value}")
+        #
+        # return Action(move.value)
+        self.depth = 2
+        self.depth_first_iterative_deepening(state, self.time_for_move)
+        return Action(self.move_to_make)
+
+
+    def depth_first_iterative_deepening(self, game_state, time_for_move):
+        def compare_depth(result):
+            print(result)
+            if result["depth"] >= self.depth:
+                self.depth = result["depth"]
+                self.move_to_make = result["move_to_make"]
+
+        p = multiprocessing.Pool()
+        [p.apply_async(self.depth_first_iterative_deepening_one_depth, (game_state, depth), callback=compare_depth)
+         for depth in range(self.depth, 20)]
+        time.sleep(time_for_move)
+        p.terminate()
+
+    def depth_first_iterative_deepening_one_depth(self, game_state, depth):
+        move_to_make = self.multi_minimax(depth, game_state)
+        print(depth)
+        return {"depth": depth, "move_to_make": move_to_make.value}
+
+
 
 class ReduceOpponentsVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
     """
@@ -492,7 +555,7 @@ class ReduceOpponentsVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
         return model, max_player, min_player_ids, is_endgame, move_to_make, max_move, alpha, actions
 
 
-class LiveAgent(ReduceOpponentsVoronoiMultiMiniMaxAgent):
+class LiveAgent(MultiVoronoiMultiMiniMax):
     """
     Live Agent
     """
@@ -503,25 +566,51 @@ class LiveAgent(ReduceOpponentsVoronoiMultiMiniMaxAgent):
         self.depth = 2
 
     def act(self, state):
-        globals()["cache"] = dict()  # defaultdict(int)
+        # if self.caching_enabled:
+        #     globals()["cache"] = dict()  # defaultdict(int)
+        #
+        # move = multiprocessing.Value('i', 4)
+        # reached_depth = multiprocessing.Value('i', 0)
+        # # self.depth_first_iterative_deepening(move, reached_depth, state)
+        # pool = multiprocessing.Pool()
+        # p = multiprocessing.Process(target=self.depth_first_iterative_deepening, name="DFID",
+        #                             args=(move, reached_depth, state, pool))
+        # # p.daemon = True
+        # p.start()
+        # p.join(self.time_for_move)
+        #
+        # # Force termination
+        # if p.is_alive():
+        #     pool.terminate()
+        #     pool.join()
+        #     p.terminate()
+        #     p.join()
+        #
+        # print(f"reached_depth: {reached_depth.value}")
+        #
+        # return Action(move.value)
+        self.depth = 2
+        self.depth_first_iterative_deepening(state, self.time_for_move)
+        print(self.depth)
+        return Action(self.move_to_make)
 
-        move = multiprocessing.Value('i', 4)
-        reached_depth = multiprocessing.Value('i', 0)
-        p = multiprocessing.Process(target=self.depth_first_iterative_deepening, name="DFID",
-                                    args=(move, reached_depth, state))
-        p.start()
-        send_time = 1
-        deadline = datetime.datetime.strptime(state["deadline"], "%Y-%m-%dT%H:%M:%SZ")
+    def depth_first_iterative_deepening(self, game_state, time_for_move):
+        def compare_depth(result):
+            if result["depth"] >= self.depth:
+                self.depth = result["depth"]
+                self.move_to_make = result["move_to_make"]
+
+        p = multiprocessing.Pool(processes=6)
+        [p.apply_async(self.depth_first_iterative_deepening_one_depth, (game_state, depth), callback=compare_depth)
+         for depth in range(self.depth, 20)]
+        send_time = 1.5
+        deadline = datetime.datetime.strptime(game_state["deadline"], "%Y-%m-%dT%H:%M:%SZ")
         response = requests.get("https://msoll.de/spe_ed_time")
         server_time = datetime.datetime.strptime(response.json()["time"], "%Y-%m-%dT%H:%M:%SZ")
         av_time = (deadline - server_time).total_seconds() - send_time
-        p.join(av_time)
+        time.sleep(av_time)
+        p.terminate()
 
-        # If thread is active
-        if p.is_alive():
-            # Terminate foo
-            p.terminate()
-            p.join()
-
-        print(f"reached_depth: {reached_depth.value}")
-        return Action(move.value)
+    def depth_first_iterative_deepening_one_depth(self, game_state, depth):
+        move_to_make = self.multi_minimax(depth, game_state)
+        return {"depth": depth, "move_to_make": move_to_make.value}
