@@ -1,3 +1,4 @@
+import copy
 import datetime
 import multiprocessing
 from itertools import permutations
@@ -46,6 +47,7 @@ class NStepSurvivalAgent(SpeedAgent):
     Agent that calculates all action combinations for the next n (depth) steps and chooses the action that has the
     lowest amount of death paths.
     """
+
     def __init__(self, model, pos, direction, speed=1, active=True, depth=1, deterministic=False):
         super().__init__(model, pos, direction, speed, active)
         self.depth = depth
@@ -111,6 +113,7 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
     """
     Agent that chooses an action based on the multi minimax algorithm
     """
+
     def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=1, caching_enabled=False):
         super().__init__(model, pos, direction, speed, active)
         self.time_for_move = time_for_move
@@ -176,7 +179,8 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
         actions = self.init_actions()
         return model, max_player, min_player_ids, is_endgame, move_to_make, max_move, alpha, actions
 
-    def move_min_players(self, model, max_player, min_player_ids, min_move, depth, alpha, is_endgame, tree_path, pre_state):
+    def move_min_players(self, model, max_player, min_player_ids, min_move, depth, alpha, is_endgame, tree_path,
+                         pre_state):
         beta = float("inf")
         for min_player_id in min_player_ids:
             min_player = model.get_agent_by_id(min_player_id)
@@ -328,10 +332,65 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
         return result
 
 
+class MultiprocessedDepthMultiMiniMax(BaseMultiMiniMaxAgent):
+    """
+    Agent that chooses an action based on the multi minimax algorithm and uses voronoi as evaluation
+    """
+
+    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=5):
+        super().__init__(model, pos, direction, speed, active, time_for_move)
+        self.time_for_move = time_for_move
+        self.max_cache_depth = 4
+        self.depth = 2
+
+    def act(self, state):
+        if self.caching_enabled:
+            globals()["cache"] = dict()  # defaultdict(int)
+
+        move = multiprocessing.Value('i', 4)
+        reached_depth = multiprocessing.Value('i', 0)
+        # self.depth_first_iterative_deepening(move, reached_depth, state)
+        p = multiprocessing.Process(target=self.depth_first_iterative_deepening, name="DFID",
+                                    args=(move, reached_depth, state))
+        p.start()
+        p.join(self.time_for_move)
+
+        # Force termination
+        if p.is_alive():
+            p.terminate()
+            p.join()
+
+        print(f"reached_depth: {reached_depth.value}")
+
+        return Action(move.value)
+
+    def depth_first_iterative_deepening(self, shared_move_var, shared_dep, game_state):
+        # pool = multiprocessing.Pool()
+        processes = [None] * 8
+        for depth in range(1, 7):  # canceled from outside
+            #   pool.apply_async(self.depth_first_iterative_deepening_one_depth,
+            #                   (shared_move_var, shared_dep, copy.deepcopy(game_state), depth))
+            processes[depth] = multiprocessing.Process(target=self.depth_first_iterative_deepening_one_depth, args=(
+            shared_move_var, shared_dep, copy.deepcopy(game_state), depth))
+            processes[depth].start()
+            processes[depth].join()
+        # print(depth)
+        # pool.close()
+        # pool.join()
+
+    def depth_first_iterative_deepening_one_depth(self, shared_move_var, shared_dep, game_state, depth):
+        print(depth)
+        move_to_make = self.multi_minimax(depth, game_state)
+        if shared_dep.value < depth:
+            shared_move_var.value = move_to_make.value
+            shared_dep.value = depth
+
+
 class VoronoiMultiMiniMaxAgent(BaseMultiMiniMaxAgent):
     """
     Agent that chooses an action based on the multi minimax algorithm and uses voronoi as evaluation
     """
+
     def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=5):
         super().__init__(model, pos, direction, speed, active, time_for_move)
         self.time_for_move = time_for_move
@@ -437,6 +496,7 @@ class LiveAgent(ReduceOpponentsVoronoiMultiMiniMaxAgent):
     """
     Live Agent
     """
+
     def __init__(self, model, pos, direction, speed=1, active=True):
         super().__init__(model, pos, direction, speed, active)
         self.max_cache_depth = 4
