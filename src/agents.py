@@ -462,10 +462,9 @@ class MultiVoronoiMultiMiniMax(VoronoiMultiMiniMaxAgent):
         self.depth = 2
         self.move_to_make = 4
 
-
     def act(self, state):
         # self.start = time.time()
-        self.depth = 2
+        self.depth = 1
         self.depth_first_iterative_deepening(state)
         print(f"{self.__class__.__name__} reached depth {self.depth}")
         # print(time.time() - self.start)
@@ -481,16 +480,21 @@ class MultiVoronoiMultiMiniMax(VoronoiMultiMiniMaxAgent):
         # print(f"Before P init {time.time() - self.start}")
         p = multiprocessing.Pool()
         [p.apply_async(self.depth_first_iterative_deepening_one_depth,
-                            (copy.deepcopy(game_state), depth), callback=compare_depth)
-         for depth in range(self.depth, 6)]
-
+                       (copy.deepcopy(game_state), depth), callback=compare_depth)
+         for depth in range(2, 20)]
+        plt.imshow(game_state["cells"])
+        plt.colorbar()
+        plt.title(game_state["you"])
+        plt.show(block=False)
         time.sleep(self.time_for_move)
         p.terminate()
 
     def depth_first_iterative_deepening_one_depth(self, game_state, depth):
+        start = time.time()
         # print(f"p init {time.time() - self.start}")
         move_to_make = self.multi_minimax(depth, game_state)
         # print(f"For {depth} time taken {time.time() - self.start}")
+        print(f"Time for Depth {depth}: {time.time() - start}")
         return {"depth": depth, "move_to_make": move_to_make.value}
 
 
@@ -532,7 +536,7 @@ class LiveAgent(MultiVoronoiMultiMiniMax):
 
     def act(self, state):
         # self.start = time.time()
-        self.depth = 2
+        self.depth = None
         self.depth_first_iterative_deepening(state)
         print(f"{self.__class__.__name__} reached depth {self.depth}")
         # print(time.time() - self.start)
@@ -548,8 +552,8 @@ class LiveAgent(MultiVoronoiMultiMiniMax):
         # print(f"Before P init {time.time() - self.start}")
         p = multiprocessing.Pool()
         [p.apply_async(self.depth_first_iterative_deepening_one_depth,
-                            (copy.deepcopy(game_state), depth), callback=compare_depth)
-         for depth in range(self.depth, 100)]
+                       (copy.deepcopy(game_state), depth), callback=compare_depth)
+         for depth in range(2, 100)]
         send_time = 2
         deadline = datetime.datetime.strptime(game_state["deadline"], "%Y-%m-%dT%H:%M:%SZ")
         response = requests.get("https://msoll.de/spe_ed_time")
@@ -565,7 +569,9 @@ class LiveAgent(MultiVoronoiMultiMiniMax):
         p.terminate()
 
     def depth_first_iterative_deepening_one_depth(self, game_state, depth):
+        start = time.time()
         # print(f"p init {time.time() - self.start}")
         move_to_make = self.multi_minimax(depth, game_state)
         # print(f"For {depth} time taken {time.time() - self.start}")
+        print(f"Time for Depth {depth}: {time.time() - start}")
         return {"depth": depth, "move_to_make": move_to_make.value}
