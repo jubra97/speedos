@@ -33,7 +33,6 @@ class RunOnline:
                 message = await self.connection.recv()
                 message = json.loads(message)
                 self.history.append(message)
-                print(message)
                 if message["players"][str(message["you"])]["active"]:
                     action = self.agent.act(message)
                     respond = str(action)

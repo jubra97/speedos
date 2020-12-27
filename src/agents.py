@@ -1,3 +1,4 @@
+import copy
 import datetime
 import multiprocessing
 from itertools import permutations
@@ -9,7 +10,7 @@ from scipy.spatial import distance
 
 from src.model import SpeedAgent
 from src.utils import Action, get_state, arg_maxes, state_to_model, model_to_json
-from src.voronoi import voronoi
+from src.voronoi import voronoi, voronoi_for_reduced_endgame
 
 
 class AgentDummy(SpeedAgent):
@@ -151,8 +152,13 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
         model, max_player, min_player_ids, is_endgame, move_to_make, max_move, alpha, actions = \
             self.init_multi_minimax(game_state)
         for action in actions:
+            if action == Action.SLOW_DOWN and max_player.speed == 1:
+                continue
+            if action == Action.SPEED_UP and max_player.speed >= 3:
+                continue
             tree_path = str(action.value)
             pre_state = model_to_json(model, trace_aware=True)
+            # pre_state = copy.deepcopy(model)
             self.update_model(model, max_player, action)
             min_move = float("inf")
 
@@ -165,8 +171,9 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
     def init_multi_minimax(self, game_state):
         model = state_to_model(game_state)
         own_id = game_state["you"]
-        _, _, is_endgame = voronoi(model, own_id)
+        _, _, is_endgame, _ = voronoi(model, own_id)
         max_player = model.get_agent_by_id(own_id)
+
         min_player_ids = list(map(lambda a: a.unique_id, model.active_speed_agents))
         min_player_ids.remove(own_id)
 
@@ -214,6 +221,7 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
     def max(self, max_player, min_player, depth, alpha, beta, model, is_endgame, tree_path):
         max_move = float("-inf")
         pre_state = model_to_json(model, trace_aware=True)
+        # pre_state = copy.deepcopy(model)
         sorted_action_list = self.init_actions()
 
         for action in sorted_action_list:
@@ -332,8 +340,9 @@ class VoronoiMultiMiniMaxAgent(BaseMultiMiniMaxAgent):
     """
     Agent that chooses an action based on the multi minimax algorithm and uses voronoi as evaluation
     """
-    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=5):
+    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=5, caching_enabled= False):
         super().__init__(model, pos, direction, speed, active, time_for_move)
+        self.caching_enabled = caching_enabled
         self.time_for_move = time_for_move
         self.max_cache_depth = 4
         self.depth = 2
@@ -383,7 +392,7 @@ class VoronoiMultiMiniMaxAgent(BaseMultiMiniMaxAgent):
 
     @staticmethod
     def voronoi_region_sizes(model, max_player, min_player):
-        voronoi_cells, voronoi_counter, _ = voronoi(model, max_player.unique_id)
+        voronoi_cells, voronoi_counter, _, _ = voronoi(model, max_player.unique_id)
         max_player_size = voronoi_counter[
             max_player.unique_id] if max_player.unique_id in voronoi_counter.keys() else 0
         min_player_size = voronoi_counter[
@@ -415,22 +424,41 @@ class ReduceOpponentsVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
     Agent that chooses an action based on the multi minimax algorithm and uses voronoi as evaluation
     """
 
-    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=5):
+    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=1):
         super().__init__(model, pos, direction, speed, active, time_for_move)
         self.time_for_move = time_for_move
         self.max_cache_depth = 4
         self.depth = 2
+        self.is_endgame = False
 
     def init_multi_minimax(self, game_state):
-        model, max_player, min_player_ids, is_endgame, move_to_make, max_move, alpha, actions = \
-            super().init_multi_minimax(game_state)
+        model = state_to_model(game_state)
+        own_id = game_state["you"]
+        _, _, is_endgame, min_player_ids = voronoi(model, own_id)
+        self.is_endgame = is_endgame
+        max_player = model.get_agent_by_id(own_id)
 
-        min_player_ids.sort(key=lambda i: distance.euclidean(model.get_agent_by_id(i).pos, max_player.pos),
-                            reverse=True)
-        if len(min_player_ids) >= 2:
-            min_player_ids = min_player_ids[-2:]
+        if own_id in min_player_ids:
+            min_player_ids.remove(own_id)
 
+        if len(min_player_ids) == 0:
+            min_player_ids = list(map(lambda a: a.unique_id, model.active_speed_agents))
+            min_player_ids.remove(own_id)
+
+        move_to_make = Action.CHANGE_NOTHING
+        max_move = float("-inf")
+        alpha = float("-inf")
+        actions = self.init_actions()
         return model, max_player, min_player_ids, is_endgame, move_to_make, max_move, alpha, actions
+
+    def voronoi_region_sizes(self, model, max_player, min_player):
+        voronoi_cells, voronoi_counter, _ = voronoi_for_reduced_endgame(model, max_player.unique_id, min_player.unique_id,
+                                                        self.is_endgame)
+        max_player_size = voronoi_counter[
+            max_player.unique_id] if max_player.unique_id in voronoi_counter.keys() else 0
+        min_player_size = voronoi_counter[
+            min_player.unique_id] if min_player.unique_id in voronoi_counter.keys() else 0
+        return voronoi_cells, max_player_size, min_player_size
 
 
 class LiveAgent(ReduceOpponentsVoronoiMultiMiniMaxAgent):
@@ -450,7 +478,7 @@ class LiveAgent(ReduceOpponentsVoronoiMultiMiniMaxAgent):
         p = multiprocessing.Process(target=self.depth_first_iterative_deepening, name="DFID",
                                     args=(move, reached_depth, state))
         p.start()
-        send_time = 1
+        send_time = 1.5
         deadline = datetime.datetime.strptime(state["deadline"], "%Y-%m-%dT%H:%M:%SZ")
         response = requests.get("https://msoll.de/spe_ed_time")
         server_time = datetime.datetime.strptime(response.json()["time"], "%Y-%m-%dT%H:%M:%SZ")
