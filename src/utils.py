@@ -160,8 +160,8 @@ def json_to_history(path_to_json, output_path, horizontal=False):
     outfile.close()
 
 
-def visualize_online_games(data_path, amount_of_games):
-    for i in range(1, amount_of_games+1):
+def visualize_online_games(data_path, start, end):
+    for i in range(start, end+1):
         path_to_json = f"{data_path}{i}.json"
 
         with open(path_to_json, encoding="utf-8") as f:
