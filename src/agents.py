@@ -157,8 +157,7 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
             if action == Action.SPEED_UP and max_player.speed >= 3:
                 continue
             tree_path = str(action.value)
-            pre_state = model_to_json(model, trace_aware=True)
-            # pre_state = copy.deepcopy(model)
+            pre_state = model_to_json(model, trace_aware=True, step=True)
             self.update_model(model, max_player, action)
             min_move = float("inf")
 
@@ -220,8 +219,7 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
 
     def max(self, max_player, min_player, depth, alpha, beta, model, is_endgame, tree_path):
         max_move = float("-inf")
-        pre_state = model_to_json(model, trace_aware=True)
-        # pre_state = copy.deepcopy(model)
+        pre_state = model_to_json(model, trace_aware=True, step=True)
         sorted_action_list = self.init_actions()
 
         for action in sorted_action_list:
@@ -239,13 +237,14 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
 
     def min(self, max_player, min_player, depth, alpha, beta, model, is_endgame, tree_path):
         min_move = float("inf")
-        pre_state = model_to_json(model, trace_aware=True)
+        pre_state = model_to_json(model, trace_aware=True, step=True)
         sorted_action_list = self.init_actions()
 
         for action in list(sorted_action_list):
             tree_path += str(action.value)
 
             self.update_model(model, min_player, action)
+            model.schedule.steps += 1
             min_move = min(min_move, self.minimax(max_player, min_player, depth - 1, alpha, beta, True, model,
                                                   is_endgame, tree_path))
             model, max_player, min_player = self.reset_model(pre_state, max_player, min_player)

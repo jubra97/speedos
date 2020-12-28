@@ -52,22 +52,26 @@ def agent_to_json(agent, trace_aware=False):
     return agent_json
 
 
-def model_to_json(model, trace_aware=False):
+def model_to_json(model, trace_aware=False, step=False):
     players = dict()
     for agent in model.speed_agents:
         players[str(agent.unique_id)] = agent_to_json(agent, trace_aware)
 
-    return {
+    state = {
         "width": model.width,
         "height": model.height,
         "cells": model.cells.copy(),
         "players": players,
-        "running": model.running
+        "running": model.running,
+        "step": step
     }
+    if step:
+        state["step"] = model.schedule.steps
+    return state
 
 
-def get_state(model, agent, deadline=None):
-    state = model_to_json(model)
+def get_state(model, agent, deadline=None, step=False):
+    state = model_to_json(model, step=step)
     state["you"] = agent.unique_id
     if deadline is not None:
         state["deadline"] = deadline.strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -118,6 +122,9 @@ def state_to_model(state, initialize_cells=False, agent_classes=None, additional
             agents_to_remove.append(agent)
     for agent in agents_to_remove:
         model.active_speed_agents.remove(agent)
+
+    if "step" in state.keys():
+        model.schedule.steps = state["step"]
     return model
 
 
