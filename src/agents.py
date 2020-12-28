@@ -121,6 +121,12 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
             self.max_cache_depth = 4
             self.tree_path = None
 
+        self.game_step = 0
+
+    def step(self):
+        super().step()
+        self.game_step += 1
+
     def act(self, state):
         if self.caching_enabled:
             globals()["cache"] = dict()  # defaultdict(int)
@@ -168,6 +174,7 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
         return move_to_make
 
     def init_multi_minimax(self, game_state):
+        game_state["step"] = self.game_step
         model = state_to_model(game_state)
         own_id = game_state["you"]
         _, _, is_endgame, _ = voronoi(model, own_id)
