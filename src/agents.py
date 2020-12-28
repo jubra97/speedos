@@ -120,6 +120,12 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
             self.max_cache_depth = 4
             self.tree_path = None
 
+        self.game_step = 0
+
+    def step(self):
+        super().step()
+        self.game_step += 1
+
     def act(self, state):
         if self.caching_enabled:
             globals()["cache"] = dict()  # defaultdict(int)
@@ -152,7 +158,7 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
             self.init_multi_minimax(game_state)
         for action in actions:
             tree_path = str(action.value)
-            pre_state = model_to_json(model, trace_aware=True)
+            pre_state = model_to_json(model, trace_aware=True, step=True)
             self.update_model(model, max_player, action)
             min_move = float("inf")
 
@@ -163,6 +169,7 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
         return move_to_make
 
     def init_multi_minimax(self, game_state):
+        game_state["step"] = self.game_step
         model = state_to_model(game_state)
         own_id = game_state["you"]
         _, _, is_endgame = voronoi(model, own_id)
@@ -213,7 +220,7 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
 
     def max(self, max_player, min_player, depth, alpha, beta, model, is_endgame, tree_path):
         max_move = float("-inf")
-        pre_state = model_to_json(model, trace_aware=True)
+        pre_state = model_to_json(model, trace_aware=True, step=True)
         sorted_action_list = self.init_actions()
 
         for action in sorted_action_list:
@@ -231,13 +238,14 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
 
     def min(self, max_player, min_player, depth, alpha, beta, model, is_endgame, tree_path):
         min_move = float("inf")
-        pre_state = model_to_json(model, trace_aware=True)
+        pre_state = model_to_json(model, trace_aware=True, step=True)
         sorted_action_list = self.init_actions()
 
         for action in list(sorted_action_list):
             tree_path += str(action.value)
 
             self.update_model(model, min_player, action)
+            model.schedule.steps += 1
             min_move = min(min_move, self.minimax(max_player, min_player, depth - 1, alpha, beta, True, model,
                                                   is_endgame, tree_path))
             model, max_player, min_player = self.reset_model(pre_state, max_player, min_player)
@@ -256,8 +264,7 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
         player.action = action
         model.step_specific_agent(player)
 
-    @staticmethod
-    def reset_model(pre_state, max_player, min_player):
+    def reset_model(self, pre_state, max_player, min_player):
         model = state_to_model(pre_state, trace_aware=True)
         own_id = max_player.unique_id
         max_player = model.get_agent_by_id(own_id)
