@@ -10,7 +10,7 @@ from scipy.spatial import distance
 
 from src.model import SpeedAgent
 from src.utils import Action, get_state, arg_maxes, state_to_model, model_to_json
-from src.voronoi import voronoi, voronoi_for_reduced_endgame
+from src.voronoi import voronoi, voronoi_for_reduced_opponents
 
 
 class AgentDummy(SpeedAgent):
@@ -112,7 +112,7 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
     """
     Agent that chooses an action based on the multi minimax algorithm
     """
-    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=1, caching_enabled=False):
+    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=5, caching_enabled=False):
         super().__init__(model, pos, direction, speed, active)
         self.time_for_move = time_for_move
         self.depth = 2
@@ -165,6 +165,8 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
             tree_path = str(action.value)
             pre_state = model_to_json(model, trace_aware=True, step=True)
             self.update_model(model, max_player, action)
+            if is_endgame:
+                model.schedule.steps += 1
             min_move = float("inf")
 
             model, max_player, min_move, alpha = self.move_min_players(model, max_player, min_player_ids, min_move,
@@ -233,6 +235,8 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
             tree_path += str(action.value)
 
             self.update_model(model, max_player, action)
+            if is_endgame:
+                model.schedule.steps += 1
             max_move = max(max_move, self.minimax(max_player, min_player, depth - 1, alpha, beta, False, model,
                                                   is_endgame, tree_path))
             model, max_player, min_player = self.reset_model(pre_state, max_player, min_player)
@@ -346,12 +350,12 @@ class VoronoiMultiMiniMaxAgent(BaseMultiMiniMaxAgent):
     """
     Agent that chooses an action based on the multi minimax algorithm and uses voronoi as evaluation
     """
-    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=5, caching_enabled= False):
+    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=2, caching_enabled= False):
         super().__init__(model, pos, direction, speed, active, time_for_move)
         self.caching_enabled = caching_enabled
         self.time_for_move = time_for_move
         self.max_cache_depth = 4
-        self.depth = 2
+        self.depth = 1
 
     def evaluate_position(self, model, max_player, min_player, depth, tree_path):
         if self.caching_enabled:
@@ -430,14 +434,17 @@ class ReduceOpponentsVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
     Agent that chooses an action based on the multi minimax algorithm and uses voronoi as evaluation
     """
 
-    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=1):
+    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=2):
         super().__init__(model, pos, direction, speed, active, time_for_move)
         self.time_for_move = time_for_move
         self.max_cache_depth = 4
         self.depth = 2
         self.is_endgame = False
+        self.game_step = 0
+
 
     def init_multi_minimax(self, game_state):
+        game_state["step"] = self.game_step
         model = state_to_model(game_state)
         own_id = game_state["you"]
         _, _, is_endgame, min_player_ids = voronoi(model, own_id)
@@ -458,7 +465,7 @@ class ReduceOpponentsVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
         return model, max_player, min_player_ids, is_endgame, move_to_make, max_move, alpha, actions
 
     def voronoi_region_sizes(self, model, max_player, min_player):
-        voronoi_cells, voronoi_counter, _ = voronoi_for_reduced_endgame(model, max_player.unique_id, min_player.unique_id,
+        voronoi_cells, voronoi_counter, _ = voronoi_for_reduced_opponents(model, max_player.unique_id, min_player.unique_id,
                                                         self.is_endgame)
         max_player_size = voronoi_counter[
             max_player.unique_id] if max_player.unique_id in voronoi_counter.keys() else 0

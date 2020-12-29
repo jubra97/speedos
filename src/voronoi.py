@@ -59,7 +59,7 @@ def voronoi(model, max_agent_id):
     return particle_cells, dict(zip(*np.unique(particle_cells[:, :, 0], return_counts=True))), is_endgame, opponent_ids
 
 
-def voronoi_for_reduced_endgame(model, max_agent_id, min_agent_id, is_endgame):
+def voronoi_for_reduced_opponents(model, max_agent_id, min_agent_id, is_endgame):
     timestamp = model.schedule.steps
     cells = model.cells
     width, height = model.width, model.height

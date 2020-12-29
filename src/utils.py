@@ -62,8 +62,7 @@ def model_to_json(model, trace_aware=False, step=False):
         "height": model.height,
         "cells": model.cells.copy(),
         "players": players,
-        "running": model.running,
-        "step": step
+        "running": model.running
     }
     if step:
         state["step"] = model.schedule.steps
