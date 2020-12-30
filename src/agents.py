@@ -473,12 +473,10 @@ class MultiprocessedVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
 
     def depth_first_iterative_deepening(self, game_state):
         def compare_depth(result):
-            # print(result)
             if result["depth"] >= self.depth:
                 self.reached_depth = result["depth"]
                 self.move_to_make = result["move_to_make"]
 
-        # print(f"Before P init {time.time() - self.start}")
         p = multiprocessing.Pool()
 
         # also compute minimax without voronoi for depth 1 to not crash in others if voronoi computation needs too long.
@@ -491,21 +489,12 @@ class MultiprocessedVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
         self.weights = [float("inf"), 1000, 1]
 
         [p.apply_async(self.depth_first_iterative_deepening_one_depth, (copy.deepcopy(game_state), depth),
-                       callback=compare_depth)
-         for depth in range(self.start_depth, 100)]
-        # plt.imshow(game_state["cells"])
-        # plt.colorbar()
-        # plt.title(game_state["you"])
-        # plt.show(block=False)
+                       callback=compare_depth) for depth in range(self.start_depth, 100)]
         time.sleep(self.time_for_move)
         p.terminate()
 
     def depth_first_iterative_deepening_one_depth(self, game_state, depth):
-        start = time.time()
-        # print(f"p init {time.time() - self.start}")
         move_to_make = self.multi_minimax(depth, game_state)
-        # print(f"For {depth} time taken {time.time() - self.start}")
-        # print(f"Time for Depth {depth}: {time.time() - start}")
         return {"depth": depth, "move_to_make": move_to_make.value}
 
     def evaluate_position(self, model, max_player, min_player, depth, tree_path):
@@ -513,8 +502,6 @@ class MultiprocessedVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
             print("evaluate " + tree_path)
             return self.get_cached_result(tree_path)
 
-        # sub_evaluations = [self.win_evaluation, self.death_evaluation, self.voronoi_evaluation]
-        # weights = [float("inf"), 1000, 1]
         result = self.prioritised_evaluation(self.sub_evaluations, self.weights, model, max_player, min_player, depth,
                                              tree_path)
 
@@ -555,14 +542,11 @@ class LiveAgent(MultiprocessedVoronoiMultiMiniMaxAgent):
 
     def depth_first_iterative_deepening(self, game_state):
         def compare_depth(result):
-            # print(result)
             if result["depth"] >= self.depth:
                 self.reached_depth = result["depth"]
                 self.move_to_make = result["move_to_make"]
 
-        # print(f"Before P init {time.time() - self.start}")
         p = multiprocessing.Pool()
-
         # also compute minimax without voronoi for depth 1 to not crash in others if voronoi computation needs too long.
         self.sub_evaluations = [self.win_evaluation, self.death_evaluation]
         self.weights = [float("inf"), 1000]
@@ -571,10 +555,9 @@ class LiveAgent(MultiprocessedVoronoiMultiMiniMaxAgent):
         time.sleep(0.0001)  # without sleep self.sub_evaluations is changed too early.
         self.sub_evaluations = [self.win_evaluation, self.death_evaluation, self.voronoi_evaluation]
         self.weights = [float("inf"), 1000, 1]
-
         [p.apply_async(self.depth_first_iterative_deepening_one_depth, (copy.deepcopy(game_state), depth),
-                       callback=compare_depth)
-         for depth in range(self.start_depth, 100)]
+                       callback=compare_depth) for depth in range(self.start_depth, 100)]
+
         send_time = 2
         deadline = datetime.datetime.strptime(game_state["deadline"], "%Y-%m-%dT%H:%M:%SZ")
         response = requests.get("https://msoll.de/spe_ed_time")
