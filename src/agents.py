@@ -125,7 +125,6 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
             self.tree_path = None
 
     def act(self, state):
-        start = time.time()
         if self.caching_enabled:
             globals()["cache"] = dict()  # defaultdict(int)
 
@@ -142,7 +141,6 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
             p.join()
 
         print(f"reached_depth: {reached_depth.value}")
-        print(time.time() - start)
         return Action(move.value)
 
     def depth_first_iterative_deepening(self, shared_move_var, shared_dep, game_state):
