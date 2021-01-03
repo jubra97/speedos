@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 
-from src.agents import BaseMultiMiniMaxAgent, VoronoiMultiMiniMaxAgent
+from src.agents import BaseMultiMiniMaxAgent, VoronoiMultiMiniMaxAgent, ReduceOpponentsVoronoiMultiMiniMaxAgent, NStepSurvivalAgent
 from src.model import SpeedModel
 from src.utils import Direction, get_state, Action
 
@@ -169,4 +169,37 @@ class TestMultiMiniMax(unittest.TestCase):
         action_agent_1 = model.active_speed_agents[0].multi_minimax(depth=2,
                                                                     game_state=get_state(model,
                                                                                          model.active_speed_agents[0]))
+        self.assertEqual(Action.SPEED_UP, action_agent_1)
+
+    def test_jumping_out(self):
+        # Agent should pick speed up to jump over wall
+        cells = np.array([
+            [0, 0, 2, 2, 2],
+            [0, 0, 2, 0, 0],
+            [2, 1, 2, 0, 0],
+            [2, 0, 2, 0, 0],
+            [2, 0, 2, 0, 0],
+            [2, 0, 2, 0, 0],
+            [2, 2, 2, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0]
+        ])
+        initial_agents_params = [
+            {"pos": (1, 2), "direction": Direction.DOWN, "speed": 1},
+            {"pos": (4, 0), "direction": Direction.LEFT}
+        ]
+        model = SpeedModel(width=5, height=12, nb_agents=2, cells=cells, initial_agents_params=initial_agents_params,
+                           agent_classes=[ReduceOpponentsVoronoiMultiMiniMaxAgent, NStepSurvivalAgent])
+
+        model.active_speed_agents[0].game_step = 4
+        model.schedule.steps = 4
+
+        action_agent_1 = model.active_speed_agents[0].multi_minimax(depth=6,
+                                                                    game_state=get_state(model,
+                                                                                         model.active_speed_agents[
+                                                                                             0]))
+
         self.assertEqual(Action.SPEED_UP, action_agent_1)
