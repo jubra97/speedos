@@ -473,7 +473,7 @@ class MultiprocessedVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
         self.time_for_move = time_for_move
         self.max_cache_depth = 4
         self.start_depth = 2
-        self.reached_depth = 0
+        self.reached_depth = (False, 0)
         self.move_to_make = 4
         self.sub_evaluations = None
         self.weights = None
@@ -487,29 +487,30 @@ class MultiprocessedVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
 
     def depth_first_iterative_deepening(self, game_state):
         def compare_depth(result):
-            if result["depth"] >= self.depth:
-                self.reached_depth = result["depth"]
+            if result["depth"] > self.reached_depth[1] or (not self.reached_depth[0] and result["with_voronoi"]):
+                self.reached_depth = (result["with_voronoi"], result["depth"])
                 self.move_to_make = result["move_to_make"]
 
         p = multiprocessing.Pool()
 
         # also compute minimax without voronoi for depth 1 to not crash in others if voronoi computation needs too long.
-        self.sub_evaluations = [self.win_evaluation, self.death_evaluation]
+        self.sub_evaluations = [self.win_evaluation, BaseMultiMiniMaxAgent.death_evaluation]
         self.weights = [float("inf"), 1000]
-        p.apply_async(self.depth_first_iterative_deepening_one_depth, (copy.deepcopy(game_state), 1),
+        p.apply_async(self.depth_first_iterative_deepening_one_depth, (copy.deepcopy(game_state), 2, False),
                       callback=compare_depth)
-        time.sleep(0.0001)  # without sleep self.sub_evaluations is changed too early.
+        time.sleep(0.001)  # without sleep self.sub_evaluations is changed too early.
         self.sub_evaluations = [self.win_evaluation, self.death_evaluation, self.voronoi_evaluation]
         self.weights = [float("inf"), 1000, 1]
 
-        [p.apply_async(self.depth_first_iterative_deepening_one_depth, (copy.deepcopy(game_state), depth),
+        [p.apply_async(self.depth_first_iterative_deepening_one_depth, (copy.deepcopy(game_state), depth, True),
                        callback=compare_depth) for depth in range(self.start_depth, 100)]
         time.sleep(self.time_for_move)
         p.terminate()
 
-    def depth_first_iterative_deepening_one_depth(self, game_state, depth):
+    def depth_first_iterative_deepening_one_depth(self, game_state, depth, with_voronoi):
+        self.depth = depth
         move_to_make = self.multi_minimax(depth, game_state)
-        return {"depth": depth, "move_to_make": move_to_make.value}
+        return {"depth": depth, "move_to_make": move_to_make.value, "with_voronoi": with_voronoi}
 
     def evaluate_position(self, model, max_player, min_player, depth, tree_path):
         if self.caching_enabled:
