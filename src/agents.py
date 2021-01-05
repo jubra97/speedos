@@ -162,7 +162,7 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
         for action in actions:
             if action == Action.SLOW_DOWN and max_player.speed == 1:
                 continue
-            if action == Action.SPEED_UP and max_player.speed >= 3:
+            if action == Action.SPEED_UP and max_player.speed >= 3 and not is_endgame:
                 continue
             tree_path = str(action.value)
             pre_state = model_to_json(model, trace_aware=True, step=True)
@@ -719,7 +719,6 @@ class MultiprocessedSlidingWindowVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAge
 
         self.depth_first_iterative_deepening(state)
         print(f"{self.__class__.__name__} reached depth {self.reached_depth}")
-        print(time.time() - self.start)
         return Action(self.move_to_make)
 
     def depth_first_iterative_deepening(self, game_state):
