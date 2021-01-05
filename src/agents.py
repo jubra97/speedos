@@ -572,17 +572,16 @@ class ReduceOpponentsVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
 
 class SlidingWindowVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
 
-    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=2, min_sliding_window_size=3):
+    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=2, min_sliding_window_size=12):
         super().__init__(model, pos, direction, speed, active, time_for_move)
         self.time_for_move = time_for_move
         self.max_cache_depth = 4
         self.depth = 2
         self.is_endgame = False
         self.game_step = 0
-        self.sliding_window_size = min_sliding_window_size
+        self.min_sliding_window_size = min_sliding_window_size
 
     def act(self, state):
-        org_state = copy.deepcopy(state)
         cells = np.array(state["cells"])
         pos = (state["players"][str(state["you"])]["y"], state["players"][str(state["you"])]["x"])
         distances = []
@@ -592,8 +591,10 @@ class SlidingWindowVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
                 player_pos = (player["y"], player["x"])
                 distances.append(distance.euclidean(pos, player_pos))
         min_dist = min(distances)
-        if min_dist > self.sliding_window_size:
+        if min_dist > self.min_sliding_window_size:
             self.sliding_window_size = int(min_dist)
+        else:
+            self.sliding_window_size = self.min_sliding_window_size
 
         upper_bound = pos[0] - self.sliding_window_size if (pos[0] - self.sliding_window_size > 0) else 0
         left_bound = pos[1] - self.sliding_window_size if (pos[1] - self.sliding_window_size > 0) else 0
@@ -613,12 +614,21 @@ class SlidingWindowVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
         for rm_player in players_to_remove:
             del state["players"][rm_player]
         players = {}
+        player_numbers = []
         for i, player_number in enumerate(state["players"], 1):
             players[f"{i}"] = state["players"][player_number]
             new_cells[new_cells == int(player_number)] = i
+            player_numbers.append(i)
             if player_number == str(state["you"]):
                 state["you"] = i
         state["players"] = players
+
+        players_in_cells = np.unique(new_cells).tolist()
+        players_in_cells.remove(0)
+        for player_in_cell in players_in_cells:
+            if player_in_cell not in player_numbers:
+                new_cells[new_cells == player_in_cell] = -1
+
         state["cells"] = new_cells.tolist()
 
         move = multiprocessing.Value('i', 4)
@@ -636,17 +646,6 @@ class SlidingWindowVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
         print(f"reached_depth: {reached_depth.value}")
 
         return Action(move.value)
-
-        # move_to_make_value = self.depth_first_iterative_deepening(state)
-        # return Action(move_to_make_value)
-
-    # def depth_first_iterative_deepening(self, game_state):
-    #     move_to_make_value = 4
-    #     while self.depth < 3:  # canceled from outside
-    #         move_to_make = self.multi_minimax(self.depth, game_state)
-    #         move_to_make_value = move_to_make.value
-    #         self.depth += 1
-    #     return move_to_make_value
 
 class LiveAgent(MultiprocessedVoronoiMultiMiniMaxAgent):
     """
