@@ -573,7 +573,7 @@ class ReduceOpponentsVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
 
 class SlidingWindowVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
 
-    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=5, min_sliding_window_size=7):
+    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=5, min_sliding_window_size=10):
         super().__init__(model, pos, direction, speed, active, time_for_move)
         self.time_for_move = time_for_move
         self.max_cache_depth = 4
@@ -594,7 +594,7 @@ class SlidingWindowVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
                     distances.append(distance.euclidean(pos, player_pos))
         min_dist = min(distances)
         if min_dist > self.min_sliding_window_size:
-            self.sliding_window_size = int(min_dist)
+            self.sliding_window_size = int(min_dist) + 3
         else:
             self.sliding_window_size = self.min_sliding_window_size
 
