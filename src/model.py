@@ -89,8 +89,14 @@ class SpeedModel(Model):
                     # head of the agent is not already a entry in self.grid
                     if len(self.grid.get_cell_list_contents((x, y))) == 0:
                         # add trace
-                        agent = AgentTrace(self, (x, y), self.speed_agents[self.cells[y, x]-1])  # get agent based on id
-                        self.add_agent(agent)
+                        try:
+                            agent = AgentTrace(self, (x, y),
+                                               self.speed_agents[self.cells[y, x] - 1])  # get agent based on id
+                            self.add_agent(agent)
+                        except:
+                            print(self.cells)
+                            print(self.speed_agents)
+                            print(self.cells[y, x] - 1)
 
     def step(self):
         """
