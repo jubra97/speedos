@@ -363,12 +363,13 @@ class MultiprocessedBaseMultiMiniMaxAgent(BaseMultiMiniMaxAgent):
         self.move_to_make = 4
 
     def act(self, state):
+        self.reached_depth = 0
         self.depth_first_iterative_deepening(state)
         return Action(self.move_to_make)
 
     def depth_first_iterative_deepening(self, game_state):
         def compare_depth(result):
-            if result["depth"] >= self.depth:
+            if result["depth"] >= self.reached_depth:
                 self.reached_depth = result["depth"]
                 self.move_to_make = result["move_to_make"]
 
@@ -379,6 +380,7 @@ class MultiprocessedBaseMultiMiniMaxAgent(BaseMultiMiniMaxAgent):
         p.terminate()
 
     def depth_first_iterative_deepening_one_depth(self, game_state, depth):
+        self.depth = depth
         move_to_make = self.multi_minimax(depth, game_state)
         return {"depth": depth, "move_to_make": move_to_make.value}
 
@@ -480,6 +482,7 @@ class MultiprocessedVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
 
     def act(self, state):
         self.start = time.time()
+        self.reached_depth = (False, 0)
         self.depth_first_iterative_deepening(state)
         print(f"{self.__class__.__name__} reached depth {self.reached_depth}")
         print(time.time() - self.start)
@@ -538,7 +541,6 @@ class ReduceOpponentsVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
         self.depth = 2
         self.is_endgame = False
         self.game_step = 0
-
 
     def init_multi_minimax(self, game_state):
         game_state["step"] = self.game_step
