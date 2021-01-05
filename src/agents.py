@@ -479,11 +479,9 @@ class MultiprocessedVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
         self.weights = None
 
     def act(self, state):
-        self.start = time.time()
         self.reached_depth = (False, 0)
         self.depth_first_iterative_deepening(state)
         print(f"{self.__class__.__name__} reached depth {self.reached_depth}")
-        print(time.time() - self.start)
         return Action(self.move_to_make)
 
     def depth_first_iterative_deepening(self, game_state):
@@ -666,7 +664,6 @@ class MultiprocessedSlidingWindowVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAge
         self.is_endgame = False
 
     def act(self, state):
-        self.start = time.time()
         self.reached_depth = (False, 0)
         cells = np.array(state["cells"])
         pos = (state["players"][str(state["you"])]["y"], state["players"][str(state["you"])]["x"])
@@ -675,10 +672,11 @@ class MultiprocessedSlidingWindowVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAge
             if player_number != str(state["you"]):
                 player = state["players"][player_number]
                 player_pos = (player["y"], player["x"])
-                distances.append(distance.euclidean(pos, player_pos))
+                if player["active"]:
+                    distances.append(distance.euclidean(pos, player_pos))
         min_dist = min(distances)
         if min_dist > self.min_sliding_window_size:
-            self.sliding_window_size = int(min_dist)
+            self.sliding_window_size = int(min_dist) + 3
         else:
             self.sliding_window_size = self.min_sliding_window_size
 
