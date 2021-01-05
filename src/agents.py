@@ -480,6 +480,7 @@ class MultiprocessedVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
 
     def act(self, state):
         self.start = time.time()
+        self.reached_depth = (False, 0)
         self.depth_first_iterative_deepening(state)
         print(f"{self.__class__.__name__} reached depth {self.reached_depth}")
         print(time.time() - self.start)
@@ -647,10 +648,124 @@ class SlidingWindowVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
 
         return Action(move.value)
 
+
+class MultiprocessedSlidingWindowVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
+    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=5, min_sliding_window_size=12):
+        super().__init__(model, pos, direction, speed, active, time_for_move)
+        self.time_for_move = time_for_move
+        self.max_cache_depth = 4
+        self.start_depth = 2
+        self.reached_depth = (False, 0)
+        self.move_to_make = 4
+        self.sub_evaluations = None
+        self.weights = None
+        self.game_step = 0
+        self.min_sliding_window_size = min_sliding_window_size
+        self.is_endgame = False
+
+    def act(self, state):
+        self.start = time.time()
+        self.reached_depth = (False, 0)
+        cells = np.array(state["cells"])
+        pos = (state["players"][str(state["you"])]["y"], state["players"][str(state["you"])]["x"])
+        distances = []
+        for player_number in state["players"]:
+            if player_number != str(state["you"]):
+                player = state["players"][player_number]
+                player_pos = (player["y"], player["x"])
+                distances.append(distance.euclidean(pos, player_pos))
+        min_dist = min(distances)
+        if min_dist > self.min_sliding_window_size:
+            self.sliding_window_size = int(min_dist)
+        else:
+            self.sliding_window_size = self.min_sliding_window_size
+
+        upper_bound = pos[0] - self.sliding_window_size if (pos[0] - self.sliding_window_size > 0) else 0
+        left_bound = pos[1] - self.sliding_window_size if (pos[1] - self.sliding_window_size > 0) else 0
+        new_cells = cells[upper_bound: pos[0] + self.sliding_window_size + 1,
+                    left_bound: pos[1] + self.sliding_window_size + 1]
+        state["height"] = new_cells.shape[0]
+        state["width"] = new_cells.shape[1]
+        players_to_remove = []
+        for player_number in state["players"]:
+            player = state["players"][player_number]
+            if player["y"] < pos[0] - self.sliding_window_size or player["y"] > pos[0] + self.sliding_window_size or \
+                    player["x"] < pos[1] - self.sliding_window_size or player["x"] > pos[1] + self.sliding_window_size:
+                players_to_remove.append(player_number)
+            else:
+                player["y"] = player["y"] - upper_bound
+                player["x"] = player["x"] - left_bound
+        for rm_player in players_to_remove:
+            del state["players"][rm_player]
+        players = {}
+        player_numbers = []
+        for i, player_number in enumerate(state["players"], 1):
+            players[f"{i}"] = state["players"][player_number]
+            new_cells[new_cells == int(player_number)] = i
+            player_numbers.append(i)
+            if player_number == str(state["you"]):
+                state["you"] = i
+        state["players"] = players
+
+        players_in_cells = np.unique(new_cells).tolist()
+        players_in_cells.remove(0)
+        for player_in_cell in players_in_cells:
+            if player_in_cell not in player_numbers:
+                new_cells[new_cells == player_in_cell] = -1
+
+        state["cells"] = new_cells.tolist()
+
+        self.depth_first_iterative_deepening(state)
+        print(f"{self.__class__.__name__} reached depth {self.reached_depth}")
+        print(time.time() - self.start)
+        return Action(self.move_to_make)
+
+    def depth_first_iterative_deepening(self, game_state):
+        def compare_depth(result):
+            if result["depth"] > self.reached_depth[1] or (not self.reached_depth[0] and result["with_voronoi"]):
+                self.reached_depth = (result["with_voronoi"], result["depth"])
+                self.move_to_make = result["move_to_make"]
+
+        p = multiprocessing.Pool()
+
+        # also compute minimax without voronoi for depth 1 to not crash in others if voronoi computation needs too long.
+        self.sub_evaluations = [self.win_evaluation, BaseMultiMiniMaxAgent.death_evaluation]
+        self.weights = [float("inf"), 1000]
+        p.apply_async(self.depth_first_iterative_deepening_one_depth, (copy.deepcopy(game_state), 2, False),
+                      callback=compare_depth)
+        time.sleep(0.001)  # without sleep self.sub_evaluations is changed too early.
+        self.sub_evaluations = [self.win_evaluation, self.death_evaluation, self.voronoi_evaluation]
+        self.weights = [float("inf"), 1000, 1]
+
+        [p.apply_async(self.depth_first_iterative_deepening_one_depth, (copy.deepcopy(game_state), depth, True),
+                       callback=compare_depth) for depth in range(self.start_depth, 100)]
+        time.sleep(self.time_for_move)
+        p.terminate()
+
+    def depth_first_iterative_deepening_one_depth(self, game_state, depth, with_voronoi):
+        self.depth = depth
+        move_to_make = self.multi_minimax(depth, game_state)
+        return {"depth": depth, "move_to_make": move_to_make.value, "with_voronoi": with_voronoi}
+
+    def evaluate_position(self, model, max_player, min_player, depth, tree_path):
+        if self.caching_enabled:
+            print("evaluate " + tree_path)
+            return self.get_cached_result(tree_path)
+
+        result = self.prioritised_evaluation(self.sub_evaluations, self.weights, model, max_player, min_player, depth,
+                                             tree_path)
+
+        if self.caching_enabled and depth < self.max_cache_depth:
+            self.cache_result(tree_path, result)
+
+        return result
+
+
 class LiveAgent(MultiprocessedVoronoiMultiMiniMaxAgent):
     """
     Live Agent
     """
+
     def __init__(self, model, pos, direction, speed=1, active=True):
         super().__init__(model, pos, direction, speed, active)
         self.start_depth = 2
