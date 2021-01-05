@@ -531,7 +531,7 @@ class ReduceOpponentsVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
     Agent that chooses an action based on the multi minimax algorithm and uses voronoi as evaluation
     """
 
-    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=2):
+    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=5):
         super().__init__(model, pos, direction, speed, active, time_for_move)
         self.time_for_move = time_for_move
         self.max_cache_depth = 4
@@ -570,9 +570,10 @@ class ReduceOpponentsVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
             min_player.unique_id] if min_player.unique_id in voronoi_counter.keys() else 0
         return voronoi_cells, max_player_size, min_player_size
 
+
 class SlidingWindowVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
 
-    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=2, min_sliding_window_size=12):
+    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=5, min_sliding_window_size=7):
         super().__init__(model, pos, direction, speed, active, time_for_move)
         self.time_for_move = time_for_move
         self.max_cache_depth = 4
@@ -589,7 +590,8 @@ class SlidingWindowVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
             if player_number != str(state["you"]):
                 player = state["players"][player_number]
                 player_pos = (player["y"], player["x"])
-                distances.append(distance.euclidean(pos, player_pos))
+                if player["active"]:
+                    distances.append(distance.euclidean(pos, player_pos))
         min_dist = min(distances)
         if min_dist > self.min_sliding_window_size:
             self.sliding_window_size = int(min_dist)
