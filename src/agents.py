@@ -679,7 +679,8 @@ class SlidingWindowVoronoiMultiMiniMaxAgent(ReduceOpponentsVoronoiMultiMiniMaxAg
 
 
 class MultiprocessedSlidingWindowVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
-    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=5, min_sliding_window_size=12):
+    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=5, min_sliding_window_size=12,
+                 sliding_window_size_offset=3):
         super().__init__(model, pos, direction, speed, active, time_for_move)
         self.time_for_move = time_for_move
         self.max_cache_depth = 4
@@ -690,6 +691,7 @@ class MultiprocessedSlidingWindowVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAge
         self.weights = None
         self.game_step = 0
         self.min_sliding_window_size = min_sliding_window_size
+        self.sliding_window_size_offset = sliding_window_size_offset
         self.is_endgame = False
 
     def act(self, state):
@@ -698,7 +700,7 @@ class MultiprocessedSlidingWindowVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAge
         own_id = state["you"]
         _, _, is_endgame, min_player_ids = voronoi(model, own_id)
         self.is_endgame = is_endgame
-        if not is_endgame and min_player_ids > 1:
+        if not is_endgame and len(min_player_ids) > 1:
             pos = model.get_agent_by_id(own_id).pos
             opponent_pos = model.get_agent_by_id(min_player_ids[0]).pos
             distance_to_next_opponent = distance.euclidean(pos, opponent_pos)
