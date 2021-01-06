@@ -159,6 +159,55 @@ def json_to_history(path_to_json, output_path, horizontal=False):
     outfile.close()
 
 
+def reduce_state_to_sliding_window(state, distance_to_next_opponent, min_sliding_window_size,
+                                   sliding_window_size_offset=3):
+
+    cells = np.array(state["cells"])
+    pos = (state["players"][str(state["you"])]["y"], state["players"][str(state["you"])]["x"])
+
+    if distance_to_next_opponent > min_sliding_window_size:
+        sliding_window_size = int(distance_to_next_opponent) + sliding_window_size_offset
+    else:
+        sliding_window_size = min_sliding_window_size
+
+    upper_bound = pos[0] - sliding_window_size if (pos[0] - sliding_window_size > 0) else 0
+    left_bound = pos[1] - sliding_window_size if (pos[1] - sliding_window_size > 0) else 0
+    new_cells = cells[upper_bound: pos[0] + sliding_window_size + 1,
+                left_bound: pos[1] + sliding_window_size + 1]
+    state["height"] = new_cells.shape[0]
+    state["width"] = new_cells.shape[1]
+    players_to_remove = []
+    for player_number in state["players"]:
+        player = state["players"][player_number]
+        if player["y"] < pos[0] - sliding_window_size or player["y"] > pos[0] + sliding_window_size or \
+                player["x"] < pos[1] - sliding_window_size or player["x"] > pos[1] + sliding_window_size:
+            players_to_remove.append(player_number)
+        else:
+            player["y"] = player["y"] - upper_bound
+            player["x"] = player["x"] - left_bound
+    for rm_player in players_to_remove:
+        del state["players"][rm_player]
+    players = {}
+    player_numbers = []
+    for i, player_number in enumerate(state["players"], 1):
+        players[f"{i}"] = state["players"][player_number]
+        new_cells[new_cells == int(player_number)] = i
+        player_numbers.append(i)
+        if player_number == str(state["you"]):
+            state["you"] = i
+    state["players"] = players
+
+    players_in_cells = np.unique(new_cells).tolist()
+    players_in_cells.remove(0)
+    for player_in_cell in players_in_cells:
+        if player_in_cell not in player_numbers:
+            new_cells[new_cells == player_in_cell] = -1
+
+    state["cells"] = new_cells.tolist()
+
+    return state
+
+
 def visualize_online_games(data_path, start, end):
     for i in range(start, end+1):
         path_to_json = f"{data_path}{i}.json"
