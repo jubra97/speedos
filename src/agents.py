@@ -10,7 +10,7 @@ from pynput import keyboard
 from scipy.spatial import distance
 
 from src.model import SpeedAgent
-from src.utils import Action, get_state, arg_maxes, state_to_model, model_to_json
+from src.utils import Action, get_state, arg_maxes, state_to_model, model_to_json, reduce_state_to_sliding_window
 from src.voronoi import voronoi, voronoi_for_reduced_opponents, early_stop_voronoi
 
 import matplotlib.pyplot as plt
@@ -634,9 +634,10 @@ class EarlyStopVoronoiMultiMiniMaxAgent(ReduceOpponentsVoronoiMultiMiniMaxAgent)
         return voronoi_cells, max_player_size, min_player_size
 
 
-class SlidingWindowVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
+class SlidingWindowVoronoiMultiMiniMaxAgent(ReduceOpponentsVoronoiMultiMiniMaxAgent):
 
-    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=5, min_sliding_window_size=10):
+    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=2, min_sliding_window_size=10,
+                 sliding_window_size_offset=3):
         super().__init__(model, pos, direction, speed, active, time_for_move)
         self.time_for_move = time_for_move
         self.max_cache_depth = 4
@@ -644,57 +645,21 @@ class SlidingWindowVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
         self.is_endgame = False
         self.game_step = 0
         self.min_sliding_window_size = min_sliding_window_size
+        self.sliding_window_size_offset = sliding_window_size_offset
 
     def act(self, state):
-        cells = np.array(state["cells"])
-        pos = (state["players"][str(state["you"])]["y"], state["players"][str(state["you"])]["x"])
-        distances = []
-        for player_number in state["players"]:
-            if player_number != str(state["you"]):
-                player = state["players"][player_number]
-                player_pos = (player["y"], player["x"])
-                if player["active"]:
-                    distances.append(distance.euclidean(pos, player_pos))
-        min_dist = min(distances)
-        if min_dist > self.min_sliding_window_size:
-            self.sliding_window_size = int(min_dist) + 3
-        else:
-            self.sliding_window_size = self.min_sliding_window_size
+        model = state_to_model(state)
+        own_id = state["you"]
+        _, _, is_endgame, min_player_ids = voronoi(model, own_id)
+        if not is_endgame and len(min_player_ids) > 1:
+            pos = model.get_agent_by_id(own_id).pos
+            opponent_pos = model.get_agent_by_id(min_player_ids[0]).pos
+            distance_to_next_opponent = distance.euclidean(pos, opponent_pos)
+            state = reduce_state_to_sliding_window(state,
+                                                   distance_to_next_opponent,
+                                                   min_sliding_window_size=self.min_sliding_window_size,
+                                                   sliding_window_size_offset=self.sliding_window_size_offset)
 
-        upper_bound = pos[0] - self.sliding_window_size if (pos[0] - self.sliding_window_size > 0) else 0
-        left_bound = pos[1] - self.sliding_window_size if (pos[1] - self.sliding_window_size > 0) else 0
-        new_cells = cells[upper_bound: pos[0] + self.sliding_window_size + 1,
-                    left_bound: pos[1] + self.sliding_window_size + 1]
-        state["height"] = new_cells.shape[0]
-        state["width"] = new_cells.shape[1]
-        players_to_remove = []
-        for player_number in state["players"]:
-            player = state["players"][player_number]
-            if player["y"] < pos[0] - self.sliding_window_size or player["y"] > pos[0] + self.sliding_window_size or \
-                    player["x"] < pos[1] - self.sliding_window_size or player["x"] > pos[1] + self.sliding_window_size:
-                players_to_remove.append(player_number)
-            else:
-                player["y"] = player["y"] - upper_bound
-                player["x"] = player["x"] - left_bound
-        for rm_player in players_to_remove:
-            del state["players"][rm_player]
-        players = {}
-        player_numbers = []
-        for i, player_number in enumerate(state["players"], 1):
-            players[f"{i}"] = state["players"][player_number]
-            new_cells[new_cells == int(player_number)] = i
-            player_numbers.append(i)
-            if player_number == str(state["you"]):
-                state["you"] = i
-        state["players"] = players
-
-        players_in_cells = np.unique(new_cells).tolist()
-        players_in_cells.remove(0)
-        for player_in_cell in players_in_cells:
-            if player_in_cell not in player_numbers:
-                new_cells[new_cells == player_in_cell] = -1
-
-        state["cells"] = new_cells.tolist()
 
         move = multiprocessing.Value('i', 4)
         reached_depth = multiprocessing.Value('i', 0)
@@ -729,55 +694,18 @@ class MultiprocessedSlidingWindowVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAge
 
     def act(self, state):
         self.reached_depth = (False, 0)
-        cells = np.array(state["cells"])
-        pos = (state["players"][str(state["you"])]["y"], state["players"][str(state["you"])]["x"])
-        distances = []
-        for player_number in state["players"]:
-            if player_number != str(state["you"]):
-                player = state["players"][player_number]
-                player_pos = (player["y"], player["x"])
-                if player["active"]:
-                    distances.append(distance.euclidean(pos, player_pos))
-        min_dist = min(distances)
-        if min_dist > self.min_sliding_window_size:
-            self.sliding_window_size = int(min_dist) + 3
-        else:
-            self.sliding_window_size = self.min_sliding_window_size
-
-        upper_bound = pos[0] - self.sliding_window_size if (pos[0] - self.sliding_window_size > 0) else 0
-        left_bound = pos[1] - self.sliding_window_size if (pos[1] - self.sliding_window_size > 0) else 0
-        new_cells = cells[upper_bound: pos[0] + self.sliding_window_size + 1,
-                    left_bound: pos[1] + self.sliding_window_size + 1]
-        state["height"] = new_cells.shape[0]
-        state["width"] = new_cells.shape[1]
-        players_to_remove = []
-        for player_number in state["players"]:
-            player = state["players"][player_number]
-            if player["y"] < pos[0] - self.sliding_window_size or player["y"] > pos[0] + self.sliding_window_size or \
-                    player["x"] < pos[1] - self.sliding_window_size or player["x"] > pos[1] + self.sliding_window_size:
-                players_to_remove.append(player_number)
-            else:
-                player["y"] = player["y"] - upper_bound
-                player["x"] = player["x"] - left_bound
-        for rm_player in players_to_remove:
-            del state["players"][rm_player]
-        players = {}
-        player_numbers = []
-        for i, player_number in enumerate(state["players"], 1):
-            players[f"{i}"] = state["players"][player_number]
-            new_cells[new_cells == int(player_number)] = i
-            player_numbers.append(i)
-            if player_number == str(state["you"]):
-                state["you"] = i
-        state["players"] = players
-
-        players_in_cells = np.unique(new_cells).tolist()
-        players_in_cells.remove(0)
-        for player_in_cell in players_in_cells:
-            if player_in_cell not in player_numbers:
-                new_cells[new_cells == player_in_cell] = -1
-
-        state["cells"] = new_cells.tolist()
+        model = state_to_model(state)
+        own_id = state["you"]
+        _, _, is_endgame, min_player_ids = voronoi(model, own_id)
+        self.is_endgame = is_endgame
+        if not is_endgame and min_player_ids > 1:
+            pos = model.get_agent_by_id(own_id).pos
+            opponent_pos = model.get_agent_by_id(min_player_ids[0]).pos
+            distance_to_next_opponent = distance.euclidean(pos, opponent_pos)
+            state = reduce_state_to_sliding_window(state,
+                                                   distance_to_next_opponent,
+                                                   min_sliding_window_size=self.min_sliding_window_size,
+                                                   sliding_window_size_offset=self.sliding_window_size_offset)
 
         self.depth_first_iterative_deepening(state)
         print(f"{self.__class__.__name__} reached depth {self.reached_depth}")
