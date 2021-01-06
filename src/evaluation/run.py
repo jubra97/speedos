@@ -1,14 +1,11 @@
-from src.agents import NStepSurvivalAgent, RandomAgent, MultiprocessedVoronoiMultiMiniMaxAgent, \
-    MultiprocessedSlidingWindowVoronoiMultiMiniMaxAgent
+from src.agents import NStepSurvivalAgent, RandomAgent
 from src.evaluation.utils import Evaluator
 
-if __name__ == "__main__":
-    model_params = {
-        "width": 20,
-        "height": 20,
-        "nb_agents": 3,
-        "agent_classes": [MultiprocessedSlidingWindowVoronoiMultiMiniMaxAgent, MultiprocessedVoronoiMultiMiniMaxAgent,
-                          NStepSurvivalAgent],
-    }
-    evaluator = Evaluator(model_params)
-    evaluator.fair_start_evaluate(6, save=True)
+model_params = {
+    "width": 10,
+    "height": 10,
+    "nb_agents": 2,
+    "agent_classes": [NStepSurvivalAgent, RandomAgent],
+}
+evaluator = Evaluator(model_params)
+evaluator.evaluate(100, save=True)
