@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 
 from src.agents import BaseMultiMiniMaxAgent, VoronoiMultiMiniMaxAgent, ReduceOpponentsVoronoiMultiMiniMaxAgent, \
-    NStepSurvivalAgent, EarlyStopVoronoiMultiMiniMaxAgent
+    NStepSurvivalAgent, EarlyStopVoronoiMultiMiniMaxAgent, SlidingWindowVoronoiMultiMiniMaxAgent
 from src.model import SpeedModel
 from src.utils import Direction, get_state, Action
 
@@ -11,7 +11,7 @@ class TestMultiMiniMax(unittest.TestCase):
 
     def setUp(self):
         self.agent_classes = [BaseMultiMiniMaxAgent, VoronoiMultiMiniMaxAgent, ReduceOpponentsVoronoiMultiMiniMaxAgent,
-                              EarlyStopVoronoiMultiMiniMaxAgent]
+                              EarlyStopVoronoiMultiMiniMaxAgent, SlidingWindowVoronoiMultiMiniMaxAgent]
 
     def test_no_gamble(self):
         # two agents facing each other should not gamble and go for the cell between them (in this case)

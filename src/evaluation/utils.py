@@ -66,7 +66,7 @@ class Evaluator:
             "Repetitions": repetitions
         }
         if self.parameter_settings_info:
-            parameter_settings = {**parameter_settings, **self.parameter_settings_info} # join the dicts
+            parameter_settings = {**parameter_settings, **self.parameter_settings_info}  # join the dicts
         parameter_settings_df = pd.DataFrame(parameter_settings, index=["Data"])
 
         timestamp = datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
