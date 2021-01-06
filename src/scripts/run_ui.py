@@ -5,9 +5,11 @@ from mesa.visualization.UserParam import UserSettableParameter
 from mesa.visualization.modules import CanvasGrid
 
 from src.agents import BaseMultiMiniMaxAgent, VoronoiMultiMiniMaxAgent, ReduceOpponentsVoronoiMultiMiniMaxAgent, \
-    NStepSurvivalAgent, SlidingWindowVoronoiMultiMiniMaxAgent
-from src.model import SpeedAgent, AgentTrace
+    NStepSurvivalAgent, SlidingWindowVoronoiMultiMiniMaxAgent, MultiprocessedVoronoiMultiMiniMaxAgent, \
+    MultiprocessedSlidingWindowVoronoiMultiMiniMaxAgent
+from src.model import SpeedAgent, AgentTrace, AgentTraceCollision
 from src.model import SpeedModel
+import numpy as np
 
 
 class CustomCanvasGrid(CanvasGrid):
@@ -48,13 +50,19 @@ def agent_portrayal(agent):
             "w": 0.95,
             "h": 0.95
         })
+    if type(agent) is AgentTraceCollision:
+        portrayal = dict(portrayal, **{
+            "Shape": "circle",
+            "Color": " brown",
+            "r": 0.95
+        })
     return portrayal
 
 
 if __name__ == "__main__":
     # Parameters
-    WIDTH = 30
-    HEIGHT = 30
+    WIDTH = 35
+    HEIGHT = 35
     COLOR_PALETTE = [
         'green',
         'blue',
@@ -66,9 +74,12 @@ if __name__ == "__main__":
     model_params = {
         "width": WIDTH,
         "height": HEIGHT,
-        "agent_classes": [SlidingWindowVoronoiMultiMiniMaxAgent, NStepSurvivalAgent, NStepSurvivalAgent,
-                          NStepSurvivalAgent],
-        "nb_agents": UserSettableParameter('slider', 'Amount of Agents', value=4, min_value=1, max_value=6, step=1)
+        # "agent_classes": [MultiprocessedVoronoiMultiMiniMaxAgent, MultiprocessedVoronoiMultiMiniMaxAgent, MultiprocessedVoronoiMultiMiniMaxAgent,
+        #                   MultiprocessedVoronoiMultiMiniMaxAgent, MultiprocessedVoronoiMultiMiniMaxAgent, MultiprocessedVoronoiMultiMiniMaxAgent],
+        "agent_classes": [MultiprocessedVoronoiMultiMiniMaxAgent, MultiprocessedVoronoiMultiMiniMaxAgent,
+                          MultiprocessedVoronoiMultiMiniMaxAgent],
+        "nb_agents": UserSettableParameter('slider', 'Amount of Agents', value=3, min_value=1, max_value=6, step=1),
+        "save": True
     }
     grid = CustomCanvasGrid(agent_portrayal, WIDTH, HEIGHT, 700, 700)
 

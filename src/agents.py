@@ -494,9 +494,9 @@ class MultiprocessedVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAgent):
 
         # also compute minimax without voronoi for depth 1 to not crash in others if voronoi computation needs too long.
         self.sub_evaluations = [self.win_evaluation, BaseMultiMiniMaxAgent.death_evaluation]
-        self.weights = [float("inf"), 1000]
-        p.apply_async(self.depth_first_iterative_deepening_one_depth, (copy.deepcopy(game_state), 2, False),
-                      callback=compare_depth)
+        self.weights = [float("inf"), 1]
+        [p.apply_async(self.depth_first_iterative_deepening_one_depth, (copy.deepcopy(game_state), depth, False),
+                       callback=compare_depth) for depth in [2]]
         time.sleep(0.001)  # without sleep self.sub_evaluations is changed too early.
         self.sub_evaluations = [self.win_evaluation, self.death_evaluation, self.voronoi_evaluation]
         self.weights = [float("inf"), 1000, 1]
@@ -729,9 +729,9 @@ class MultiprocessedSlidingWindowVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAge
 
         # also compute minimax without voronoi for depth 1 to not crash in others if voronoi computation needs too long.
         self.sub_evaluations = [self.win_evaluation, BaseMultiMiniMaxAgent.death_evaluation]
-        self.weights = [float("inf"), 1000]
-        p.apply_async(self.depth_first_iterative_deepening_one_depth, (copy.deepcopy(game_state), 2, False),
-                      callback=compare_depth)
+        self.weights = [float("inf"), 1]
+        [p.apply_async(self.depth_first_iterative_deepening_one_depth, (copy.deepcopy(game_state), depth, False),
+                       callback=compare_depth) for depth in [2]]
         time.sleep(0.001)  # without sleep self.sub_evaluations is changed too early.
         self.sub_evaluations = [self.win_evaluation, self.death_evaluation, self.voronoi_evaluation]
         self.weights = [float("inf"), 1000, 1]
@@ -777,10 +777,10 @@ class LiveAgent(MultiprocessedVoronoiMultiMiniMaxAgent):
 
         p = multiprocessing.Pool()
         # also compute minimax without voronoi for depth 1 to not crash in others if voronoi computation needs too long.
-        self.sub_evaluations = [self.win_evaluation, self.death_evaluation]
-        self.weights = [float("inf"), 1000]
-        p.apply_async(self.depth_first_iterative_deepening_one_depth, (copy.deepcopy(game_state), 1),
-                      callback=compare_depth)
+        self.sub_evaluations = [self.win_evaluation, BaseMultiMiniMaxAgent.death_evaluation]
+        self.weights = [float("inf"), 1]
+        [p.apply_async(self.depth_first_iterative_deepening_one_depth, (copy.deepcopy(game_state), depth, False),
+                       callback=compare_depth) for depth in [2]]
         time.sleep(0.0001)  # without sleep self.sub_evaluations is changed too early.
         self.sub_evaluations = [self.win_evaluation, self.death_evaluation, self.voronoi_evaluation]
         self.weights = [float("inf"), 1000, 1]
