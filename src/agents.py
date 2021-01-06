@@ -652,6 +652,8 @@ class SlidingWindowVoronoiMultiMiniMaxAgent(ReduceOpponentsVoronoiMultiMiniMaxAg
         model = state_to_model(state)
         own_id = state["you"]
         _, _, is_endgame, min_player_ids = voronoi(model, own_id)
+        if own_id in min_player_ids:
+            min_player_ids.remove(own_id)
         if not is_endgame and len(min_player_ids) > 1:
             pos = model.get_agent_by_id(own_id).pos
             opponent_pos = model.get_agent_by_id(min_player_ids[0]).pos
@@ -700,6 +702,8 @@ class MultiprocessedSlidingWindowVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAge
         model = state_to_model(state)
         own_id = state["you"]
         _, _, is_endgame, min_player_ids = voronoi(model, own_id)
+        if own_id in min_player_ids:
+            min_player_ids.remove(own_id)
         self.is_endgame = is_endgame
         if not is_endgame and len(min_player_ids) > 1:
             pos = model.get_agent_by_id(own_id).pos
