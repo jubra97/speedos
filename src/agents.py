@@ -114,7 +114,7 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
     """
     Agent that chooses an action based on the multi minimax algorithm
     """
-    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=5, caching_enabled=False):
+    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=4, caching_enabled=False):
         super().__init__(model, pos, direction, speed, active)
         self.time_for_move = time_for_move
         self.depth = 2
@@ -637,14 +637,14 @@ class EarlyStopVoronoiMultiMiniMaxAgent(ReduceOpponentsVoronoiMultiMiniMaxAgent)
 
 class SlidingWindowVoronoiMultiMiniMaxAgent(ReduceOpponentsVoronoiMultiMiniMaxAgent):
 
-    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=2, min_sliding_window_size=10,
-                 sliding_window_size_offset=3):
+    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=2, min_sliding_window_size=15,
+                 sliding_window_size_offset=5):
         super().__init__(model, pos, direction, speed, active, time_for_move)
         self.time_for_move = time_for_move
         self.max_cache_depth = 4
         self.depth = 2
         self.is_endgame = False
-        self.game_step = 0
+        self.game_step = 1
         self.min_sliding_window_size = min_sliding_window_size
         self.sliding_window_size_offset = sliding_window_size_offset
 
@@ -759,10 +759,62 @@ class MultiprocessedSlidingWindowVoronoiMultiMiniMaxAgent(VoronoiMultiMiniMaxAge
         return result
 
 
-class LiveAgent(MultiprocessedVoronoiMultiMiniMaxAgent):
+class LiveAgent(SlidingWindowVoronoiMultiMiniMaxAgent):
     """
     Live Agent
     """
+    def init(self, model, pos, direction, speed=1, active=True):
+        super().init(model, pos, direction, speed, active)
+        self.max_cache_depth = 4
+        self.depth = 2
+
+    def act(self, state):
+        globals()["cache"] = dict()  # defaultdict(int)
+
+
+        model = state_to_model(state)
+        own_id = state["you"]
+        _, _, is_endgame, min_player_ids = voronoi(model, own_id)
+        if own_id in min_player_ids:
+            min_player_ids.remove(own_id)
+        if not is_endgame and len(min_player_ids) > 1:
+            pos = model.get_agent_by_id(own_id).pos
+            opponent_pos = model.get_agent_by_id(min_player_ids[0]).pos
+            distance_to_next_opponent = distance.euclidean(pos, opponent_pos)
+            state = reduce_state_to_sliding_window(state,
+                                                   distance_to_next_opponent,
+                                                   min_sliding_window_size=self.min_sliding_window_size,
+                                                   sliding_window_size_offset=self.sliding_window_size_offset)
+
+        move = multiprocessing.Value('i', 4)
+        reached_depth = multiprocessing.Value('i', 0)
+        p = multiprocessing.Process(target=self.depth_first_iterative_deepening, name="DFID",
+                                    args=(move, reached_depth, state))
+        p.start()
+        send_time = 1.5
+        deadline = datetime.datetime.strptime(state["deadline"], "%Y-%m-%dT%H:%M:%SZ")
+        response = requests.get("https://msoll.de/spe_ed_time")
+        server_time = datetime.datetime.strptime(response.json()["time"], "%Y-%m-%dT%H:%M:%SZ")
+        av_time = (deadline - server_time).total_seconds() - send_time
+        if av_time < 2.5:
+            print(av_time)
+        p.join(av_time)
+
+        # If thread is active
+        if p.is_alive():
+            # Terminate foo
+            p.terminate()
+            p.join()
+
+        print(f"reached_depth: {reached_depth.value} on step {self.game_step}")
+
+        self.game_step += 1
+
+        return Action(move.value)
+
+
+"""class LiveAgent(MultiprocessedVoronoiMultiMiniMaxAgent):
+
     def __init__(self, model, pos, direction, speed=1, active=True):
         super().__init__(model, pos, direction, speed, active)
         self.start_depth = 2
@@ -797,4 +849,4 @@ class LiveAgent(MultiprocessedVoronoiMultiMiniMaxAgent):
         if av_time < 0:
             av_time = 0
         time.sleep(av_time)
-        p.terminate()
+        p.terminate()"""

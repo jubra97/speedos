@@ -37,6 +37,7 @@ class RunOnline:
         url = "wss://msoll.de/spe_ed?key=" + API_KEY
         self.connection = await websockets.client.connect(url)
         if self.connection.open:
+            self.agent = LiveAgent(None, None, None)
             self.write_log(f"Connection established at {datetime.now()}")
 
     async def play_game(self, run_number):
