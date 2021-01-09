@@ -644,7 +644,7 @@ class SlidingWindowVoronoiMultiMiniMaxAgent(ReduceOpponentsVoronoiMultiMiniMaxAg
         self.max_cache_depth = 4
         self.depth = 2
         self.is_endgame = False
-        self.game_step = 1
+        self.game_step = 0
         self.min_sliding_window_size = min_sliding_window_size
         self.sliding_window_size_offset = sliding_window_size_offset
 
