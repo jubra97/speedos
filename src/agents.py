@@ -6,7 +6,6 @@ from itertools import permutations
 
 import numpy as np
 import requests
-from pynput import keyboard
 from scipy.spatial import distance
 
 from src.model import SpeedAgent
@@ -94,6 +93,7 @@ class NStepSurvivalAgent(SpeedAgent):
 class HumanAgent(SpeedAgent):
 
     def act(self, state):
+        from pynput import keyboard
         with keyboard.Events() as events:
             # Block for as much as possible
             input_key = events.get(1000000).key
@@ -763,10 +763,11 @@ class LiveAgent(SlidingWindowVoronoiMultiMiniMaxAgent):
     """
     Live Agent
     """
-    def init(self, model, pos, direction, speed=1, active=True):
-        super().init(model, pos, direction, speed, active)
+    def __init__(self, model, pos, direction, speed=1, active=True, server_time_url="https://msoll.de/spe_ed_time"):
+        super().__init__(model, pos, direction, speed, active)
         self.max_cache_depth = 4
         self.depth = 2
+        self.server_time_url = server_time_url
 
     def act(self, state):
         globals()["cache"] = dict()  # defaultdict(int)
@@ -793,7 +794,7 @@ class LiveAgent(SlidingWindowVoronoiMultiMiniMaxAgent):
         p.start()
         send_time = 1.5
         deadline = datetime.datetime.strptime(state["deadline"], "%Y-%m-%dT%H:%M:%SZ")
-        response = requests.get("https://msoll.de/spe_ed_time")
+        response = requests.get(self.server_time_url)
         server_time = datetime.datetime.strptime(response.json()["time"], "%Y-%m-%dT%H:%M:%SZ")
         av_time = (deadline - server_time).total_seconds() - send_time
         if av_time < 2.5:

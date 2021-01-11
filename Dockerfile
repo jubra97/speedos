@@ -9,11 +9,8 @@ COPY requirements.txt .
 # install dependencies to the local user directory (eg. /root/.local)
 RUN pip install --user -r requirements.txt
 
-# expose port of speed_viz
-EXPOSE 8521
-
 # copy files
-COPY src/scripts/run_online.py .
+COPY src/scripts/run_docker.py .
 COPY src/ src/
 
-CMD [ "python", "./run_online.py" ]
+CMD [ "python", "./run_docker.py" ]
