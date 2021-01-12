@@ -38,9 +38,10 @@ class Evaluator:
             repetitions_to_iter = int(repetitions / self.model_params["nb_agents"])
         self._init_tables(repetitions)
         for rep in range(repetitions_to_iter):
-            start_pos = [
-                (random.randrange(0, self.model_params["width"]), random.randrange(0, self.model_params["height"])) for
-                _ in range(self.model_params["nb_agents"])]
+            pos_samples = random.sample(range(self.model_params["width"] * self.model_params["height"] - 1),
+                                        self.model_params["nb_agents"])
+            start_pos = [(sample % self.model_params["width"], sample // self.model_params["width"]) for sample in
+                         pos_samples]
             start_dir = [random.choice(list(Direction)) for _ in range(self.model_params["nb_agents"])]
             for i in range(self.model_params["nb_agents"]):
                 args = [{"pos": start_pos[j % self.model_params["nb_agents"]],
@@ -52,7 +53,7 @@ class Evaluator:
                 if seeds is not None:
                     self.model.reset_randomizer(seeds[rep])
                 self.model.run_model()
-                self._update_tables(rep + i)
+                self._update_tables(rep * self.model_params["nb_agents"] + i)
         self._process_results(repetitions, show, save)
 
     def _process_results(self, repetitions, show, save):
