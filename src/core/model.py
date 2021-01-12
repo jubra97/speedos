@@ -11,8 +11,8 @@ from mesa import Model
 from mesa.space import MultiGrid
 from mesa.time import SimultaneousActivation
 
-from src.utils import Direction, Action, get_state
-from src.utils import model_to_json
+from src.core.utils import Direction, Action, get_state
+from src.core.utils import model_to_json
 
 
 class SpeedModel(Model):

@@ -2,10 +2,10 @@ import unittest
 
 import numpy as np
 
-from src.agents import NStepSurvivalAgent
-from src.model import SpeedModel
-from src.utils import Direction
-from src.voronoi import voronoi, voronoi_for_reduced_opponents, Particle, surrounding_cells
+from src.core.agents import NStepSurvivalAgent
+from src.core.model import SpeedModel
+from src.core.utils import Direction
+from src.core.voronoi import voronoi, voronoi_for_reduced_opponents, Particle, surrounding_cells
 
 
 class TestVoronoi(unittest.TestCase):

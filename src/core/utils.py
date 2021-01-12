@@ -86,8 +86,8 @@ def arg_maxes(arr, indices=None):
 
 def state_to_model(state, initialize_cells=False, agent_classes=None, additional_params=None, trace_aware=False):
     # import here to avoid cyclic imports
-    from src.model import SpeedModel
-    from src.agents import DummyAgent
+    from src.core.model import SpeedModel
+    from src.core.agents import DummyAgent
     width = state["width"]
     height = state["height"]
     nb_agents = len(state["players"])

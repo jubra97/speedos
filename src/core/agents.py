@@ -9,9 +9,9 @@ import requests
 from pynput import keyboard
 from scipy.spatial import distance
 
-from src.model import SpeedAgent
-from src.utils import Action, get_state, arg_maxes, state_to_model, model_to_json, reduce_state_to_sliding_window
-from src.voronoi import voronoi, voronoi_for_reduced_opponents
+from src.core.model import SpeedAgent
+from src.core.utils import Action, get_state, arg_maxes, state_to_model, model_to_json, reduce_state_to_sliding_window
+from src.core.voronoi import voronoi, voronoi_for_reduced_opponents
 
 
 class DummyAgent(SpeedAgent):

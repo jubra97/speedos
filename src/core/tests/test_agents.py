@@ -2,10 +2,10 @@ import unittest
 
 import numpy as np
 
-from src.agents import MultiMinimaxAgent, VoronoiAgent, ClosestOpponentsVoronoiAgent, NStepSurvivalAgent, \
+from src.core.agents import MultiMinimaxAgent, VoronoiAgent, ClosestOpponentsVoronoiAgent, NStepSurvivalAgent, \
     SlidingWindowVoronoiAgent, ParallelSlidingWindowVoronoiAgent, ParallelVoronoiAgent
-from src.model import SpeedModel
-from src.utils import Direction, get_state, Action
+from src.core.model import SpeedModel
+from src.core.utils import Direction, get_state, Action
 
 
 class TestAgents(unittest.TestCase):

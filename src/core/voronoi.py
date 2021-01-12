@@ -1,8 +1,6 @@
-from copy import copy
-
 import numpy as np
 
-from src.utils import Direction
+from src.core.utils import Direction
 
 
 class Particle:

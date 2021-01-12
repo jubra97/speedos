@@ -3,9 +3,9 @@ from datetime import datetime
 
 from mesa import Model
 
-from src.agents import NStepSurvivalAgent, RandomAgent, DummyAgent
-from src.model import SpeedModel
-from src.utils import *
+from src.core.agents import NStepSurvivalAgent, RandomAgent, DummyAgent
+from src.core.model import SpeedModel
+from src.core.utils import *
 
 
 class TestOutOfBounds(unittest.TestCase):

@@ -5,8 +5,8 @@ from datetime import datetime
 import numpy as np
 import pandas as pd
 
-from src.model import SpeedModel
-from src.utils import Direction
+from src.core.model import SpeedModel
+from src.core.utils import Direction
 
 
 class Evaluator:

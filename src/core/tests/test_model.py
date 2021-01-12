@@ -5,14 +5,14 @@ import unittest
 import numpy as np
 from mesa import Model
 
-from src.agents import DummyAgent
-from src.utils import Direction, Action, state_to_model, get_state
+from src.core.agents import DummyAgent
+from src.core.utils import Direction, Action, state_to_model, get_state
 
 
 class TestModelValidity(unittest.TestCase):
 
     def setUp(self):
-        self.original_games_path = os.path.abspath("..") + "../../res/originalGames/"
+        self.original_games_path = os.path.abspath("../..") + "../../res/originalGames/"
         self.test_games = os.listdir(self.original_games_path)
         self.model = Model()
         self.maxDiff = None
@@ -63,7 +63,7 @@ class TestModelValidity(unittest.TestCase):
         :param model: The model to be checked
         :return:
         """
-        from src.model import AgentTrace, AgentTraceCollision
+        from src.core.model import AgentTrace, AgentTraceCollision
         grid_as_np_array = np.empty((model.height, model.width), dtype="int")
         for entry, x, y in model.grid.coord_iter():
             if len(entry) == 0:

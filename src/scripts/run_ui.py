@@ -4,9 +4,9 @@ from mesa.visualization.ModularVisualization import ModularServer
 from mesa.visualization.UserParam import UserSettableParameter
 from mesa.visualization.modules import CanvasGrid
 
-from src.agents import ParallelVoronoiAgent
-from src.model import SpeedAgent, AgentTrace, AgentTraceCollision
-from src.model import SpeedModel
+from src.core.agents import ParallelVoronoiAgent
+from src.core.model import SpeedAgent, AgentTrace, AgentTraceCollision
+from src.core.model import SpeedModel
 
 
 class CustomCanvasGrid(CanvasGrid):
