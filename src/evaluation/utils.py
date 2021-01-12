@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 
 from src.model import SpeedModel
+from src.utils import Direction
+import random
 
 
 class Evaluator:
@@ -27,6 +29,31 @@ class Evaluator:
                 self.model.reset_randomizer(seeds[rep])
             self.model.run_model()
             self._update_tables(rep)
+        self._process_results(repetitions, show, save)
+
+    def fair_start_evaluate(self, repetitions, seeds=None, show=True, save=False):
+        if repetitions % self.model_params["nb_agents"]:
+            raise ValueError("Repetitions must be a multiple of nb_agents")
+        else:
+            repetitions_to_iter = int(repetitions / self.model_params["nb_agents"])
+        self._init_tables(repetitions)
+        for rep in range(repetitions_to_iter):
+            pos_samples = random.sample(range(self.model_params["width"] * self.model_params["height"] - 1),
+                                        self.model_params["nb_agents"])
+            start_pos = [(sample % self.model_params["width"], sample // self.model_params["width"]) for sample in
+                         pos_samples]
+            start_dir = [random.choice(list(Direction)) for _ in range(self.model_params["nb_agents"])]
+            for i in range(self.model_params["nb_agents"]):
+                args = [{"pos": start_pos[j % self.model_params["nb_agents"]],
+                         "direction": start_dir[j % self.model_params["nb_agents"]]} for j in
+                        range(i, self.model_params["nb_agents"] + i)]
+                self.model_params["initial_agents_params"] = args
+
+                self.model = SpeedModel(**self.model_params)
+                if seeds is not None:
+                    self.model.reset_randomizer(seeds[rep])
+                self.model.run_model()
+                self._update_tables(rep * self.model_params["nb_agents"] + i)
         self._process_results(repetitions, show, save)
 
     def _process_results(self, repetitions, show, save):
