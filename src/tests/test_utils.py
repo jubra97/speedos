@@ -1,13 +1,29 @@
 import unittest
+from datetime import datetime
 
 import numpy as np
 from mesa import Model
 
-from src.agents import NStepSurvivalAgent
+from src.agents import NStepSurvivalAgent, RandomAgent
 from src.model import SpeedAgent
 from src.model import SpeedModel
 from src.utils import *
 from src.voronoi import voronoi
+
+
+class TestOutOfBounds(unittest.TestCase):
+
+    def test_in_bounds(self):
+        self.assertFalse(out_of_bounds((10, 10), (0, 0)))
+        self.assertFalse(out_of_bounds((10, 10), (9, 9)))
+        self.assertFalse(out_of_bounds((10, 10), (3, 7)))
+
+    def test_out_of_bounds(self):
+        self.assertTrue(out_of_bounds((10, 10), (-1, 0)))
+        self.assertTrue(out_of_bounds((10, 10), (0, -1)))
+        self.assertTrue(out_of_bounds((10, 10), (0, 10)))
+        self.assertTrue(out_of_bounds((10, 10), (10, 0)))
+        self.assertTrue(out_of_bounds((10, 10), (10, -1)))
 
 
 class TestAgentToJson(unittest.TestCase):
@@ -42,6 +58,121 @@ class TestAgentToJson(unittest.TestCase):
         )
 
 
+class TestModelToJson(unittest.TestCase):
+
+    def setUp(self):
+        self.model = SpeedModel(30, 30, 2, [RandomAgent, RandomAgent],
+                                initial_agents_params=[{"pos": (10, 10), "direction": Direction.DOWN},
+                                                       {"pos": (20, 20), "direction": Direction.LEFT}])
+
+        self.json = {
+            "width": 30,
+            "height": 30,
+            "cells": self.model.cells.copy(),
+            "players": {
+                "1": {
+                    "x": 10,
+                    "y": 10,
+                    "direction": str(Direction.DOWN),
+                    "speed": 1,
+                    "active": True
+                },
+                "2": {
+                    "x": 20,
+                    "y": 20,
+                    "direction": str(Direction.LEFT),
+                    "speed": 1,
+                    "active": True
+                }
+            },
+            "running": True
+        }
+
+    def test_default(self):
+        result = model_to_json(self.model)
+        self.assertTrue((result["cells"] == self.json["cells"]).all())
+
+        result.pop("cells")
+        default_json = self.json.copy()
+        default_json.pop("cells")
+        self.assertDictEqual(result, default_json)
+
+    def test_trace_aware(self):
+        result = model_to_json(self.model, trace_aware=True)
+        self.assertTrue((result["cells"] == self.json["cells"]).all())
+
+        result.pop("cells")
+        trace_json = self.json.copy()
+        trace_json.pop("cells")
+        trace_json["players"]["1"]["trace"] = []
+        trace_json["players"]["2"]["trace"] = []
+        self.assertDictEqual(result, trace_json)
+
+    def test_step(self):
+        result = model_to_json(self.model, step=True)
+        self.assertTrue((result["cells"] == self.json["cells"]).all())
+
+        result.pop("cells")
+        step_json = self.json.copy()
+        step_json.pop("cells")
+        step_json["step"] = 0
+        self.assertDictEqual(result, step_json)
+
+
+class TestGetState(unittest.TestCase):
+
+    def setUp(self):
+        self.model = SpeedModel(30, 30, 2, [RandomAgent, RandomAgent],
+                                initial_agents_params=[{"pos": (10, 10), "direction": Direction.DOWN},
+                                                       {"pos": (20, 20), "direction": Direction.LEFT}])
+        self.own_agent = self.model.active_speed_agents[0]
+
+        self.json = {
+            "width": 30,
+            "height": 30,
+            "cells": self.model.cells.copy(),
+            "players": {
+                "1": {
+                    "x": 10,
+                    "y": 10,
+                    "direction": str(Direction.DOWN),
+                    "speed": 1,
+                    "active": True
+                },
+                "2": {
+                    "x": 20,
+                    "y": 20,
+                    "direction": str(Direction.LEFT),
+                    "speed": 1,
+                    "active": True
+                }
+            },
+            "running": True,
+            "you": 1
+        }
+
+    def test_default(self):
+        result = get_state(self.model, self.own_agent)
+        self.assertTrue((result["cells"] == self.json["cells"]).all())
+
+        result.pop("cells")
+        default_json = self.json.copy()
+        default_json.pop("cells")
+        self.assertDictEqual(result, default_json)
+
+    def test_deadline(self):
+        deadline = "2020-12-24T12:59:00Z"
+        result = get_state(self.model, self.own_agent, deadline=datetime.strptime(deadline, "%Y-%m-%dT%H:%M:%SZ"))
+        self.assertTrue((result["cells"] == self.json["cells"]).all())
+
+        result.pop("cells")
+        default_json = self.json.copy()
+        default_json.pop("cells")
+        default_json["deadline"] = deadline
+        self.assertDictEqual(result, default_json)
+
+
+
 class TestArgMaxes(unittest.TestCase):
 
     def test_empty(self):
@@ -57,6 +188,22 @@ class TestArgMaxes(unittest.TestCase):
         self.assertEqual(arg_maxes([-1, 5, 5, 4], indices=None), [1, 2])
         self.assertEqual(arg_maxes([-1, -1, -10, -1], indices=None), [0, 1, 3])
         self.assertEqual(arg_maxes([-1, -1, -10, -1], indices=['a', 'b', 'c', 'd']), ['a', 'b', 'd'])
+
+
+class TestStateToModel(unittest.TestCase):
+
+    def setUp(self):
+        self.model = SpeedModel(30, 30, 2, [RandomAgent, RandomAgent],
+                                initial_agents_params=[{"pos": (10, 10), "direction": Direction.DOWN},
+                                                       {"pos": (20, 20), "direction": Direction.LEFT}])
+
+    def test_default(self):
+        result_model = state_to_model(model_to_json(self.model))
+        self.assertEqual(result_model.width, self.model.width)
+        self.assertEqual(result_model.height, self.model.height)
+        self.assertTrue((result_model.cells == self.model.cells).all())
+        self.assertEqual(result_model.nb_agents, self.model.nb_agents)
+        self.assertEqual(result_model.running, self.model.running)
 
 
 class TestVoronoi(unittest.TestCase):
