@@ -1,10 +1,7 @@
-from multiprocessing.spawn import freeze_support
-
 from src.core.agents import MultiMinimaxAgent, VoronoiAgent, SlidingWindowVoronoiAgent, ClosestOpponentsVoronoiAgent
 from src.evaluation.utils import Evaluator
 
 if __name__ == '__main__':
-    freeze_support()
     for i in range(100):
         model_params = {
             "width": 60,
