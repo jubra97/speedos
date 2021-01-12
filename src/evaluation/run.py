@@ -1,4 +1,4 @@
-from src.agents import NStepSurvivalAgent, RandomAgent
+from src.agents import NStepSurvivalAgent
 from src.evaluation.utils import Evaluator
 
 model_params = {

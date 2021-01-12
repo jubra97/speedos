@@ -1,17 +1,18 @@
 import unittest
+
 import numpy as np
 
-from src.agents import BaseMultiMiniMaxAgent, VoronoiMultiMiniMaxAgent, ReduceOpponentsVoronoiMultiMiniMaxAgent, \
-    NStepSurvivalAgent, EarlyStopVoronoiMultiMiniMaxAgent, SlidingWindowVoronoiMultiMiniMaxAgent
+from src.agents import MultiMinimaxAgent, VoronoiAgent, ClosestOpponentsVoronoiAgent, NStepSurvivalAgent, \
+    SlidingWindowVoronoiAgent, ParallelSlidingWindowVoronoiAgent, ParallelVoronoiAgent
 from src.model import SpeedModel
 from src.utils import Direction, get_state, Action
 
 
-class TestMultiMiniMax(unittest.TestCase):
+class TestAgents(unittest.TestCase):
 
     def setUp(self):
-        self.agent_classes = [BaseMultiMiniMaxAgent, VoronoiMultiMiniMaxAgent, ReduceOpponentsVoronoiMultiMiniMaxAgent,
-                              EarlyStopVoronoiMultiMiniMaxAgent, SlidingWindowVoronoiMultiMiniMaxAgent]
+        self.agent_classes = [MultiMinimaxAgent, VoronoiAgent, ParallelVoronoiAgent, ClosestOpponentsVoronoiAgent,
+                              SlidingWindowVoronoiAgent, ParallelSlidingWindowVoronoiAgent]
 
     def test_no_gamble(self):
         # two agents facing each other should not gamble and go for the cell between them (in this case)
@@ -32,10 +33,12 @@ class TestMultiMiniMax(unittest.TestCase):
 
             action_agent_1 = model.active_speed_agents[0].multi_minimax(depth=2,
                                                                         game_state=get_state(model,
-                                                                                             model.active_speed_agents[0]))
+                                                                                             model.active_speed_agents[
+                                                                                                 0]))
             action_agent_2 = model.active_speed_agents[0].multi_minimax(depth=2,
                                                                         game_state=get_state(model,
-                                                                                             model.active_speed_agents[1]))
+                                                                                             model.active_speed_agents[
+                                                                                                 1]))
             self.assertEqual(Action.TURN_RIGHT, action_agent_1)
             self.assertEqual(Action.TURN_LEFT, action_agent_2)
 
@@ -58,14 +61,15 @@ class TestMultiMiniMax(unittest.TestCase):
 
             action_agent_1 = model.active_speed_agents[0].multi_minimax(depth=8,
                                                                         game_state=get_state(model,
-                                                                                             model.active_speed_agents[0]))
+                                                                                             model.active_speed_agents[
+                                                                                                 0]))
             self.assertEqual(Action.TURN_RIGHT, action_agent_1)
 
     def test_cut_off(self):
         # Agent 1 can cut off agent 2 in one move (only with action SPEED_UP) and win the endgame
         # (voronoi should detect that)
         for agent_cls in self.agent_classes:
-            if agent_cls != BaseMultiMiniMaxAgent:
+            if agent_cls != MultiMinimaxAgent:
                 cells = np.array([
                     [0, 0, 0, 0, 0, 0, 1],
                     [0, 0, 0, 0, 0, 0, 1],
@@ -80,12 +84,12 @@ class TestMultiMiniMax(unittest.TestCase):
                     {"pos": (5, 3), "direction": Direction.LEFT},
                     {"pos": (3, 6), "direction": Direction.UP}
                 ]
-                model = SpeedModel(width=7, height=8, nb_agents=2, cells=cells, initial_agents_params=initial_agents_params,
+                model = SpeedModel(width=7, height=8, nb_agents=2, cells=cells,
+                                   initial_agents_params=initial_agents_params,
                                    agent_classes=[agent_cls for _ in range(2)])
 
-                action_agent_1 = model.active_speed_agents[0].multi_minimax(depth=2,
-                                                                            game_state=get_state(model,
-                                                                                                 model.active_speed_agents[0]))
+                game_state = get_state(model, model.active_speed_agents[0])
+                action_agent_1 = model.active_speed_agents[0].multi_minimax(depth=2, game_state=game_state)
                 self.assertEqual(Action.SPEED_UP, action_agent_1)
 
     def test_kamikaze(self):
@@ -108,7 +112,8 @@ class TestMultiMiniMax(unittest.TestCase):
 
             action_agent_1 = model.active_speed_agents[0].multi_minimax(depth=2,
                                                                         game_state=get_state(model,
-                                                                                             model.active_speed_agents[0]))
+                                                                                             model.active_speed_agents[
+                                                                                                 0]))
             self.assertEqual(Action.CHANGE_NOTHING, action_agent_1)
 
     @unittest.skip  # not yet implemented
@@ -135,7 +140,8 @@ class TestMultiMiniMax(unittest.TestCase):
 
             action_agent_1 = model.active_speed_agents[0].multi_minimax(depth=2,
                                                                         game_state=get_state(model,
-                                                                                             model.active_speed_agents[0]))
+                                                                                             model.active_speed_agents[
+                                                                                                 0]))
             self.assertEqual(Action.SPEED_UP, action_agent_1)
 
     def test_jumping_out(self):
@@ -159,7 +165,8 @@ class TestMultiMiniMax(unittest.TestCase):
                 {"pos": (1, 2), "direction": Direction.DOWN, "speed": 1},
                 {"pos": (4, 0), "direction": Direction.LEFT}
             ]
-            model = SpeedModel(width=5, height=12, nb_agents=2, cells=cells, initial_agents_params=initial_agents_params,
+            model = SpeedModel(width=5, height=12, nb_agents=2, cells=cells,
+                               initial_agents_params=initial_agents_params,
                                agent_classes=[agent_cls, NStepSurvivalAgent])
 
             model.active_speed_agents[0].game_step = 4

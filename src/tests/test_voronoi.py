@@ -1,10 +1,11 @@
 import unittest
 
+import numpy as np
+
 from src.agents import NStepSurvivalAgent
 from src.model import SpeedModel
 from src.utils import Direction
 from src.voronoi import voronoi, voronoi_for_reduced_opponents, Particle, surrounding_cells
-import numpy as np
 
 
 class TestVoronoi(unittest.TestCase):
@@ -100,6 +101,7 @@ class TestVoronoi(unittest.TestCase):
 
 
 class TestSurroundingCells(unittest.TestCase):
+
     def test_surrounding_cells(self):
         parent = Particle((5, 5), 1, Direction.DOWN)
         particles = surrounding_cells(parent, 20, 20)
@@ -119,6 +121,3 @@ class TestSurroundingCells(unittest.TestCase):
         self.assertTrue((0, 1) in all_pos)
         self.assertTrue((1, 0) in all_pos)
         self.assertFalse((1, 1) in all_pos)
-
-
-

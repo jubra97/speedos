@@ -3,8 +3,7 @@ from datetime import datetime
 
 from mesa import Model
 
-from src.agents import NStepSurvivalAgent, RandomAgent
-from src.model import SpeedAgent
+from src.agents import NStepSurvivalAgent, RandomAgent, DummyAgent
 from src.model import SpeedModel
 from src.utils import *
 
@@ -30,7 +29,7 @@ class TestAgentToJson(unittest.TestCase):
         self.model = Model()
 
     def test_default_params(self):
-        agent = SpeedAgent(self.model, (5, 23), Direction.UP)
+        agent = DummyAgent(self.model, (5, 23), Direction.UP)
         self.assertEqual(
             agent_to_json(agent),
             {
@@ -43,7 +42,7 @@ class TestAgentToJson(unittest.TestCase):
         )
 
     def test_non_default_params(self):
-        agent = SpeedAgent(self.model, (5, 23), Direction.UP, 9, False)
+        agent = DummyAgent(self.model, (5, 23), Direction.UP, 9, False)
         self.assertEqual(
             agent_to_json(agent),
             {

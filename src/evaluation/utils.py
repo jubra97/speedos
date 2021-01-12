@@ -1,3 +1,4 @@
+import random
 import webbrowser
 from datetime import datetime
 
@@ -6,7 +7,6 @@ import pandas as pd
 
 from src.model import SpeedModel
 from src.utils import Direction
-import random
 
 
 class Evaluator:

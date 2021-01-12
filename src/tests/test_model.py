@@ -5,7 +5,7 @@ import unittest
 import numpy as np
 from mesa import Model
 
-from src.agents import AgentDummy
+from src.agents import DummyAgent
 from src.utils import Direction, Action, state_to_model, get_state
 
 
@@ -28,7 +28,7 @@ class TestModelValidity(unittest.TestCase):
             game = self.remove_duplicates(game)
 
             initial_state = game[0]
-            model = state_to_model(initial_state, False, [AgentDummy for _ in range(len(initial_state["players"]))])
+            model = state_to_model(initial_state, False, [DummyAgent for _ in range(len(initial_state["players"]))])
             own_agent = model.get_agent_by_id(1)
             while model.running:
                 state = get_state(model, own_agent)
@@ -100,9 +100,12 @@ class TestModelValidity(unittest.TestCase):
             org_game[model.schedule.steps + 1]["players"][agent_id]["direction"].upper()].value
         # In the real game the the agent sometimes doesn't move and gets inactive.
         # This behavior is not implemented in the model but should not let the tests fail.
-        if org_game[model.schedule.steps]["players"][agent_id]["x"] == org_game[model.schedule.steps + 1]["players"][agent_id]["x"] and \
-            org_game[model.schedule.steps]["players"][agent_id]["y"] == org_game[model.schedule.steps + 1]["players"][agent_id]["y"] and \
-                org_game[model.schedule.steps]["players"][agent_id]["speed"] == org_game[model.schedule.steps + 1]["players"][agent_id]["speed"]:
+        if org_game[model.schedule.steps]["players"][agent_id]["x"] == \
+                org_game[model.schedule.steps + 1]["players"][agent_id]["x"] and \
+                org_game[model.schedule.steps]["players"][agent_id]["y"] == \
+                org_game[model.schedule.steps + 1]["players"][agent_id]["y"] and \
+                org_game[model.schedule.steps]["players"][agent_id]["speed"] == \
+                org_game[model.schedule.steps + 1]["players"][agent_id]["speed"]:
             return "set_inactive"
         if current_speed - next_speed == -1:
             return Action.SPEED_UP
@@ -121,7 +124,7 @@ class TestModelValidity(unittest.TestCase):
     def remove_duplicates(game):
         rounds_to_remove = []
         for i in range(len(game) - 2):
-            if game[i] == game[i+1]:
+            if game[i] == game[i + 1]:
                 rounds_to_remove.append(i)
         for r in reversed(rounds_to_remove):
             game.pop(r)

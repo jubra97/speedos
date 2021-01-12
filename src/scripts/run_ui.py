@@ -4,12 +4,9 @@ from mesa.visualization.ModularVisualization import ModularServer
 from mesa.visualization.UserParam import UserSettableParameter
 from mesa.visualization.modules import CanvasGrid
 
-from src.agents import BaseMultiMiniMaxAgent, VoronoiMultiMiniMaxAgent, ReduceOpponentsVoronoiMultiMiniMaxAgent, \
-    NStepSurvivalAgent, SlidingWindowVoronoiMultiMiniMaxAgent, MultiprocessedVoronoiMultiMiniMaxAgent, \
-    MultiprocessedSlidingWindowVoronoiMultiMiniMaxAgent
+from src.agents import ParallelVoronoiAgent
 from src.model import SpeedAgent, AgentTrace, AgentTraceCollision
 from src.model import SpeedModel
-import numpy as np
 
 
 class CustomCanvasGrid(CanvasGrid):
@@ -74,10 +71,7 @@ if __name__ == "__main__":
     model_params = {
         "width": WIDTH,
         "height": HEIGHT,
-        # "agent_classes": [MultiprocessedVoronoiMultiMiniMaxAgent, MultiprocessedVoronoiMultiMiniMaxAgent, MultiprocessedVoronoiMultiMiniMaxAgent,
-        #                   MultiprocessedVoronoiMultiMiniMaxAgent, MultiprocessedVoronoiMultiMiniMaxAgent, MultiprocessedVoronoiMultiMiniMaxAgent],
-        "agent_classes": [MultiprocessedVoronoiMultiMiniMaxAgent, MultiprocessedVoronoiMultiMiniMaxAgent,
-                          MultiprocessedVoronoiMultiMiniMaxAgent],
+        "agent_classes": [ParallelVoronoiAgent, ParallelVoronoiAgent, ParallelVoronoiAgent],
         "nb_agents": UserSettableParameter('slider', 'Amount of Agents', value=3, min_value=1, max_value=6, step=1),
         "save": True
     }
