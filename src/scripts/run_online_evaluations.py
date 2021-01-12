@@ -65,8 +65,6 @@ class RunOnline:
                     action = self.agent.act(message)
                     respond = str(action)
                     respond = f'{{"action": "{respond}"}}'
-                    if datetime.utcnow() > deadline:
-                        self.write_log(f"Missed deadline by {(datetime.utcnow() - deadline).total_seconds()}.")
                     try:
                         await self.connection.send(respond)
                     except Exception as e:

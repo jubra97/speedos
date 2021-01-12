@@ -234,6 +234,10 @@ class BaseMultiMiniMaxAgent(SpeedAgent):
         sorted_action_list = self.init_actions()
 
         for action in sorted_action_list:
+            if action == Action.SLOW_DOWN and max_player.speed == 1:
+                continue
+            if action == Action.SPEED_UP and max_player.speed >= 3 and not is_endgame:
+                continue
             tree_path += str(action.value)
 
             self.update_model(model, max_player, action)
@@ -587,6 +591,12 @@ class EarlyStopVoronoiMultiMiniMaxAgent(ReduceOpponentsVoronoiMultiMiniMaxAgent)
         sorted_action_list = self.init_actions()
 
         for action in sorted_action_list:
+
+            if action == Action.SLOW_DOWN and max_player.speed == 1:
+                continue
+            if action == Action.SPEED_UP and max_player.speed >= 3 and not is_endgame:
+                continue
+
             tree_path += str(action.value)
 
             self.update_model(model, max_player, action)
@@ -777,7 +787,7 @@ class LiveAgent(SlidingWindowVoronoiMultiMiniMaxAgent):
         _, _, is_endgame, min_player_ids = voronoi(model, own_id)
         if own_id in min_player_ids:
             min_player_ids.remove(own_id)
-        if not is_endgame and len(min_player_ids) > 1:
+        if not is_endgame:
             pos = model.get_agent_by_id(own_id).pos
             opponent_pos = model.get_agent_by_id(min_player_ids[0]).pos
             distance_to_next_opponent = distance.euclidean(pos, opponent_pos)
