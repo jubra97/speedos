@@ -58,6 +58,7 @@ def voronoi(model, max_agent_id):
                     new_particles.extend(surrounding_cells(particle, width, height))
 
         particles = new_particles
+
     return particle_cells, dict(zip(*np.unique(particle_cells[:, :, 0], return_counts=True))), is_endgame, opponent_ids
 
 
@@ -70,8 +71,7 @@ def voronoi_for_reduced_opponents(model, max_agent_id, min_agent_id, is_endgame)
     particle_cells = np.zeros((*cells.shape, 2), dtype=np.int16)
 
     particles = []
-    agents_list = [model.get_agent_by_id(max_agent_id), model.get_agent_by_id(min_agent_id)] if not is_endgame else \
-        [model.get_agent_by_id(max_agent_id)]
+    agents_list = [model.get_agent_by_id(max_agent_id), model.get_agent_by_id(min_agent_id)]
     for agent in agents_list:
         particle = Particle(agent.pos, agent.unique_id, agent.direction)
         particles.extend(surrounding_cells(particle, width, height))
