@@ -83,6 +83,7 @@ class Evaluator:
                 for winner in self.model.active_speed_agents:
                     self.placement_table[winner.unique_id - 1, rep] += 1
                 self._update_tables(rep * self.model_params["nb_agents"] + i)
+                print(f"Finished Game {rep * self.model_params['nb_agents'] + i} at {datetime.now()}")
         self._process_results(repetitions, show, save)
 
     def _process_results(self, repetitions, show, save):
