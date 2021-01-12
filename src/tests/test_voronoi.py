@@ -3,7 +3,7 @@ import unittest
 from src.agents import NStepSurvivalAgent
 from src.model import SpeedModel
 from src.utils import Direction
-from src.voronoi import voronoi, voronoi_for_reduced_opponents
+from src.voronoi import voronoi, voronoi_for_reduced_opponents, Particle, surrounding_cells
 import numpy as np
 
 
@@ -97,3 +97,28 @@ class TestVoronoi(unittest.TestCase):
                                           False)
         self.assertEqual({1: 53, 2: 35}, region_sizes)
         self.assertEqual(False, is_endgame)
+
+
+class TestSurroundingCells(unittest.TestCase):
+    def test_surrounding_cells(self):
+        parent = Particle((5, 5), 1, Direction.DOWN)
+        particles = surrounding_cells(parent, 20, 20)
+        all_pos = [p.position for p in particles]
+
+        self.assertEqual(len(particles), 3)
+        self.assertTrue((6, 5) in all_pos)
+        self.assertTrue((4, 5) in all_pos)
+        self.assertTrue((5, 6) in all_pos)
+        self.assertFalse((5, 4) in all_pos)
+
+        parent = Particle((0, 0), 1, Direction.DOWN)
+        particles = surrounding_cells(parent, 20, 20)
+        all_pos = [p.position for p in particles]
+
+        self.assertEqual(len(particles), 2)
+        self.assertTrue((0, 1) in all_pos)
+        self.assertTrue((1, 0) in all_pos)
+        self.assertFalse((1, 1) in all_pos)
+
+
+
