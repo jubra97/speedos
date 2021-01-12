@@ -1,13 +1,12 @@
 import unittest
+from datetime import datetime
 
-import numpy as np
 from mesa import Model
 
 from src.agents import NStepSurvivalAgent, RandomAgent
 from src.model import SpeedAgent
 from src.model import SpeedModel
 from src.utils import *
-from src.voronoi import voronoi, voronoi_for_reduced_opponents
 
 
 class TestOutOfBounds(unittest.TestCase):
