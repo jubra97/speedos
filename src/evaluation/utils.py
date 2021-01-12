@@ -67,7 +67,7 @@ class Evaluator:
                     self.model_params["initial_agents_params"][i]["direction"] = args[i]["direction"]
 
                 if random_move_time:
-                    move_time = np.random.uniform(1, 2)
+                    move_time = np.random.uniform(5, 15)
                     for j in range(self.model_params["nb_agents"]):
                         self.model_params["initial_agents_params"][j]["time_for_move"] = move_time
                 self.model = SpeedModel(**self.model_params)
