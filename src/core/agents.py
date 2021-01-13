@@ -1,8 +1,6 @@
 import copy
 import datetime
 import multiprocessing, logging
-logger = multiprocessing.log_to_stderr()
-logger.setLevel(logging.INFO)
 import time
 from itertools import permutations
 
@@ -12,8 +10,8 @@ from pynput import keyboard
 from scipy.spatial import distance
 
 from src.core.model import SpeedAgent
-from src.core.utils import get_state, arg_maxes, state_to_model, model_to_json, reduce_state_to_sliding_window, Action
-from src.core.voronoi import voronoi, voronoi_for_reduced_opponents
+from src.core.utils import Action, get_state, arg_maxes, state_to_model, model_to_json, reduce_state_to_sliding_window
+from src.core.voronoi_cython_unchanged import voronoi, voronoi_for_reduced_opponents
 
 
 class DummyAgent(SpeedAgent):
@@ -127,7 +125,7 @@ class MultiMinimaxAgent(SpeedAgent):
         self.game_step += 1
 
     def act(self, state):
-        print("______")
+        print("_____Single_____")
         self.start = time.time()
         move = multiprocessing.Value('i', 4)
         reached_depth = multiprocessing.Value('i', 0)
@@ -406,11 +404,10 @@ class ParallelVoronoiAgent(VoronoiAgent):
         self.weights = [float("inf"), 1000, 1]
 
     def act(self, state):
-        print(f"_______{self.game_step}_______")
+        print("_____Multi_____")
         self.start = time.time()
         self.reached_depth = (False, 0)
         self.depth_first_iterative_deepening(state)
-        print("Done")
         return Action(self.move_to_make)
 
     def depth_first_iterative_deepening(self, game_state):
@@ -422,20 +419,18 @@ class ParallelVoronoiAgent(VoronoiAgent):
         p = multiprocessing.Pool(multiprocessing.cpu_count()-1)
 
         # also compute minimax without voronoi for depth 1 to not crash in others if voronoi computation needs too long.
-        # self.sub_evaluations = [self.win_evaluation, MultiMinimaxAgent.death_evaluation]
-        # self.weights = [float("inf"), 1]
-        # [p.apply_async(self.depth_first_iterative_deepening_one_depth, (copy.deepcopy(game_state), depth, False),
-        #                callback=compare_depth) for depth in [2]]
-        # time.sleep(0.01)  # without sleep self.sub_evaluations is changed too early.
+        self.sub_evaluations = [self.win_evaluation, MultiMinimaxAgent.death_evaluation]
+        self.weights = [float("inf"), 1]
+        [p.apply_async(self.depth_first_iterative_deepening_one_depth, (copy.deepcopy(game_state), depth, False),
+                       callback=compare_depth) for depth in [2]]
+        time.sleep(0.01)  # without sleep self.sub_evaluations is changed too early.
         self.sub_evaluations = [self.win_evaluation, self.death_evaluation, self.voronoi_evaluation]
         self.weights = [float("inf"), 1000, 1]
 
         [p.apply_async(self.depth_first_iterative_deepening_one_depth, (copy.deepcopy(game_state), depth, True),
                        callback=compare_depth) for depth in range(self.start_depth, 100)]
         time.sleep(self.time_for_move)
-        print("Hä")
         p.terminate()
-        print("HÄHÄ")
 
     def depth_first_iterative_deepening_one_depth(self, game_state, depth, with_voronoi):
         self.depth = depth
