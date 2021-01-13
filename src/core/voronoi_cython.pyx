@@ -21,7 +21,7 @@ cdef struct Particle:
     int agent_id
     int direction
 
-def voronoi(model, int max_agent_id):
+def voronoi(model: SpeedModel, int max_agent_id):
     cdef bint is_endgame
     cdef int timestamp, width, height
     cdef (int, int) pos
@@ -74,9 +74,12 @@ def voronoi(model, int max_agent_id):
         particles = new_particles
     return particle_cells, dict(zip(*np.unique(particle_cells[:, :, 0], return_counts=True))), is_endgame, opponent_ids
 
-def voronoi_for_reduced_opponents(model, int max_agent_id, int min_agent_id, bint is_endgame):
+def voronoi_for_reduced_opponents(model: SpeedModel, int max_agent_id, int min_agent_id, bint is_endgame):
     cdef int timestamp, width, height
     cdef (int, int) pos
+    cdef dict region_sizes
+    cdef Particle particle
+    cdef bint survived
 
     start_t = time.time()
     timestamp = model.schedule.steps
@@ -89,7 +92,7 @@ def voronoi_for_reduced_opponents(model, int max_agent_id, int min_agent_id, bin
     particles = []
     agents_list = [model.get_agent_by_id(max_agent_id), model.get_agent_by_id(min_agent_id)] if not is_endgame else \
         [model.get_agent_by_id(max_agent_id)]
-    cdef Particle particle
+
     for agent in agents_list:
         particle = Particle(agent.pos[0], agent.pos[1], agent.unique_id, agent.direction.value)
         particles.extend(surrounding_cells(particle, width, height))
