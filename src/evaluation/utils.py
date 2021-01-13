@@ -1,6 +1,7 @@
 import random
 import webbrowser
 from datetime import datetime
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -84,9 +85,9 @@ class Evaluator:
                     self.placement_table[winner.unique_id - 1, rep] += 1
                 self._update_tables(rep * self.model_params["nb_agents"] + i)
                 if verbose:
-                    print(f"Finished Game {rep * self.model_params['nb_agents'] + i} at {datetime.now()}")
+                    print(f"Finished Game {rep * self.model_params['nb_agents'] + i} at {datetime.now()}", flush=True)
                     print(f"Current Evaluation Results: \n{self.win_table}\n{self.elimination_step_table}\n"
-                          f"{self.placement_table}\n{self.elimination_action_table}\n{self.agent_independent_table}\n")
+                          f"{self.placement_table}\n{self.elimination_action_table}\n{self.agent_independent_table}\n", flush=True)
         self._process_results(repetitions, show, save)
 
     def _process_results(self, repetitions, show, save):
@@ -138,7 +139,9 @@ class Evaluator:
         timestamp = datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
 
         if save:
-            writer = pd.ExcelWriter(f"../../res/evaluation/eval_{timestamp}.xlsx", engine='xlsxwriter')
+            out_path = "/res/eval"
+            Path(out_path).mkdir(parents=True, exist_ok=True)
+            writer = pd.ExcelWriter(out_path + f"/eval_{timestamp}.xlsx", engine='xlsxwriter')
 
             agent_table.to_excel(writer, sheet_name='Agents')
             agent_independent_df.to_excel(writer, sheet_name='Global')
