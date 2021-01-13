@@ -46,7 +46,7 @@ class Evaluator:
             self._update_tables(rep)
         self._process_results(repetitions, show, save)
 
-    def fair_start_evaluate(self, repetitions, seeds=None, show=True, save=False, random_move_time=False):
+    def fair_start_evaluate(self, repetitions, seeds=None, show=True, save=False, verbose=False, random_move_time=False):
         if repetitions % self.model_params["nb_agents"]:
             raise ValueError("Repetitions must be a multiple of nb_agents")
         else:
@@ -83,7 +83,10 @@ class Evaluator:
                 for winner in self.model.active_speed_agents:
                     self.placement_table[winner.unique_id - 1, rep] += 1
                 self._update_tables(rep * self.model_params["nb_agents"] + i)
-                print(f"Finished Game {rep * self.model_params['nb_agents'] + i} at {datetime.now()}")
+                if verbose:
+                    print(f"Finished Game {rep * self.model_params['nb_agents'] + i} at {datetime.now()}")
+                    print(f"Current Evaluation Results: \n{self.win_table}\n{self.elimination_step_table}\n"
+                          f"{self.placement_table}\n{self.elimination_action_table}\n{self.agent_independent_table}\n")
         self._process_results(repetitions, show, save)
 
     def _process_results(self, repetitions, show, save):
