@@ -20,7 +20,7 @@ def voronoi(model, max_agent_id):
     cells = model.cells
     width, height = model.width, model.height
     # format: (height, width, (id, timestamp))
-    particle_cells = np.zeros((*cells.shape, 2), dtype=np.int16)
+    particle_cells = np.zeros((*cells.shape, 2), dtype=np.int)
 
     particles = []
     for agent in model.active_speed_agents:
@@ -67,7 +67,7 @@ def voronoi_for_reduced_opponents(model, max_agent_id, min_agent_id, is_endgame)
     width, height = model.width, model.height
     region_sizes = {max_agent_id: 0, min_agent_id: 0}
     # format: (height, width, (id, timestamp))
-    particle_cells = np.zeros((*cells.shape, 2), dtype=np.int16)
+    particle_cells = np.zeros((*cells.shape, 2), dtype=np.int)
 
     particles = []
     agents_list = [model.get_agent_by_id(max_agent_id), model.get_agent_by_id(min_agent_id)]
