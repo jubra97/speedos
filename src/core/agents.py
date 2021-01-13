@@ -1,6 +1,8 @@
 import copy
 import datetime
-import multiprocessing
+import multiprocessing, logging
+logger = multiprocessing.log_to_stderr()
+logger.setLevel(logging.INFO)
 import time
 from itertools import permutations
 
@@ -11,7 +13,7 @@ from scipy.spatial import distance
 
 from src.core.model import SpeedAgent
 from src.core.utils import get_state, arg_maxes, state_to_model, model_to_json, reduce_state_to_sliding_window, Action
-from src.core.voronoi_cython_unchanged import voronoi, voronoi_for_reduced_opponents
+from src.core.voronoi import voronoi, voronoi_for_reduced_opponents
 
 
 class DummyAgent(SpeedAgent):
@@ -408,6 +410,7 @@ class ParallelVoronoiAgent(VoronoiAgent):
         self.start = time.time()
         self.reached_depth = (False, 0)
         self.depth_first_iterative_deepening(state)
+        print("Done")
         return Action(self.move_to_make)
 
     def depth_first_iterative_deepening(self, game_state):
@@ -430,7 +433,9 @@ class ParallelVoronoiAgent(VoronoiAgent):
         [p.apply_async(self.depth_first_iterative_deepening_one_depth, (copy.deepcopy(game_state), depth, True),
                        callback=compare_depth) for depth in range(self.start_depth, 100)]
         time.sleep(self.time_for_move)
+        print("Hä")
         p.terminate()
+        print("HÄHÄ")
 
     def depth_first_iterative_deepening_one_depth(self, game_state, depth, with_voronoi):
         self.depth = depth

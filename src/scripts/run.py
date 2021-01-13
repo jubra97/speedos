@@ -7,5 +7,5 @@ if __name__ == "__main__":
                              {"pos": (10, 10), "direction": Direction.DOWN}]
 
     model = SpeedModel(50, 50, 2,
-                       agent_classes=[VoronoiAgent, VoronoiAgent], initial_agents_params=initial_agents_params)
+                       agent_classes=[ParallelVoronoiAgent, ParallelVoronoiAgent], initial_agents_params=initial_agents_params)
     model.run_model()
