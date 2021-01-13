@@ -30,7 +30,9 @@ def out_of_bounds(cell_size, pos) -> bool:
     return x < 0 or x >= cell_size[1] or y < 0 or y >= cell_size[0]
 
 
-def agent_to_json(agent, trace_aware=False):
+def agent_to_json(agent, bint trace_aware=False):
+    cdef int x,y
+    cdef dict agent_json
     x, y = agent.pos
     agent_json = {
         "x": x,
@@ -44,7 +46,8 @@ def agent_to_json(agent, trace_aware=False):
     return agent_json
 
 
-def model_to_json(model, trace_aware=False, step=False):
+def model_to_json(model,bint trace_aware=False,bint step=False):
+    cdef dict players, state
     players = dict()
     for agent in model.speed_agents:
         players[str(agent.unique_id)] = agent_to_json(agent, trace_aware)
@@ -61,7 +64,8 @@ def model_to_json(model, trace_aware=False, step=False):
     return state
 
 
-def get_state(model, agent, deadline=None, step=False):
+def get_state(model, agent, deadline=None, bint step=False):
+    cdef dict state
     state = model_to_json(model, step=step)
     state["you"] = agent.unique_id
     if deadline is not None:
@@ -84,10 +88,13 @@ def arg_maxes(arr, indices=None):
     return maxes
 
 
-def state_to_model(state, initialize_cells=False, agent_classes=None, additional_params=None, trace_aware=False):
+def state_to_model(dict state, bint initialize_cells=False, agent_classes=None, additional_params=None, bint trace_aware=False):
     # import here to avoid cyclic imports
     from src.core.model import SpeedModel
     from src.core.agents import DummyAgent
+
+    cdef int width, height, nb_agents
+
     width = state["width"]
     height = state["height"]
     nb_agents = len(state["players"])
