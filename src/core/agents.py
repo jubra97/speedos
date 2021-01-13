@@ -6,7 +6,6 @@ from itertools import permutations
 
 import numpy as np
 import requests
-from pynput import keyboard
 from scipy.spatial import distance
 
 from src.core.model import SpeedAgent
@@ -93,6 +92,7 @@ class NStepSurvivalAgent(SpeedAgent):
 class HumanAgent(SpeedAgent):
 
     def act(self, state):
+        from pynput import keyboard
         with keyboard.Events() as events:
             # Block for as much as possible
             input_key = events.get(1000000).key
@@ -131,6 +131,7 @@ class MultiMinimaxAgent(SpeedAgent):
                                     args=(move, reached_depth, state))
         p.start()
         p.join(self.time_for_move)
+        print(f"{str(type(self))} reached depth: {reached_depth.value}", flush=True)
 
         # Force termination
         if p.is_alive():
@@ -510,6 +511,7 @@ class SlidingWindowVoronoiAgent(ClosestOpponentsVoronoiAgent):
                                     args=(move, reached_depth, state))
         p.start()
         p.join(self.time_for_move)
+        print(f"{str(type(self))} reached depth: {reached_depth.value}", flush=True)
 
         # Force termination
         if p.is_alive():
