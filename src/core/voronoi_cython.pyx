@@ -1,9 +1,9 @@
 #cython: language_level=3
 import time
-from copy import copy
 
 import numpy as np
 
+from src.core.model import SpeedModel
 from src.core.utils import Direction
 
 # cdef class Particle:
