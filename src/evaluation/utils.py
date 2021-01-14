@@ -1,6 +1,7 @@
 import random
 import webbrowser
 from datetime import datetime
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -15,23 +16,38 @@ class Evaluator:
         self.model_params = model_params
         self.parameter_settings_info = parameter_settings_info
 
+        if "initial_agents_params" not in self.model_params:
+            self.model_params["initial_agents_params"] = [{} for _ in range(self.model_params["nb_agents"])]
         self.model = SpeedModel(**model_params)
         self.win_table = None
         self.elimination_step_table = None
+        self.placement_table = None
         self.elimination_action_table = None
         self.agent_independent_table = None
 
-    def evaluate(self, repetitions, seeds=None, show=True, save=False):
+    def evaluate(self, repetitions, seeds=None, show=True, save=False, random_move_time=False):
         self._init_tables(repetitions)
         for rep in range(repetitions):
+            if random_move_time:
+                move_time = np.random.uniform(5, 15)
+                for i in range(self.model_params["nb_agents"]):
+                    self.model_params["initial_agents_params"][i]["time_for_move"] = move_time
             self.model = SpeedModel(**self.model_params)
             if seeds is not None:
                 self.model.reset_randomizer(seeds[rep])
-            self.model.run_model()
+            while self.model.running:
+                active_agent_ids = list(map(lambda x: x.unique_id, self.model.active_speed_agents))
+                self.model.step()
+                new_active_agent_ids = list(map(lambda x: x.unique_id, self.model.active_speed_agents))
+                active_agents_ids_disjunction = list(set(active_agent_ids) - set(new_active_agent_ids))
+                for unique_id in active_agents_ids_disjunction:
+                    self.placement_table[unique_id - 1, rep] += len(self.model.active_speed_agents) + 1
+            for winner in self.model.active_speed_agents:
+                self.placement_table[winner.unique_id - 1, rep] += 1
             self._update_tables(rep)
         self._process_results(repetitions, show, save)
 
-    def fair_start_evaluate(self, repetitions, seeds=None, show=True, save=False):
+    def fair_start_evaluate(self, repetitions, seeds=None, show=True, save=False, verbose=False, random_move_time=False):
         if repetitions % self.model_params["nb_agents"]:
             raise ValueError("Repetitions must be a multiple of nb_agents")
         else:
@@ -47,13 +63,31 @@ class Evaluator:
                 args = [{"pos": start_pos[j % self.model_params["nb_agents"]],
                          "direction": start_dir[j % self.model_params["nb_agents"]]} for j in
                         range(i, self.model_params["nb_agents"] + i)]
-                self.model_params["initial_agents_params"] = args
+                for j in range(self.model_params["nb_agents"]):
+                    self.model_params["initial_agents_params"][i]["pos"] = args[i]["pos"]
+                    self.model_params["initial_agents_params"][i]["direction"] = args[i]["direction"]
 
+                if random_move_time:
+                    move_time = np.random.uniform(5, 15)
+                    for j in range(self.model_params["nb_agents"]):
+                        self.model_params["initial_agents_params"][j]["time_for_move"] = move_time
                 self.model = SpeedModel(**self.model_params)
                 if seeds is not None:
                     self.model.reset_randomizer(seeds[rep])
-                self.model.run_model()
+                while self.model.running:
+                    active_agent_ids = list(map(lambda x: x.unique_id, self.model.active_speed_agents))
+                    self.model.step()
+                    new_active_agent_ids = list(map(lambda x: x.unique_id, self.model.active_speed_agents))
+                    active_agents_ids_disjunction = list(set(active_agent_ids) - set(new_active_agent_ids))
+                    for unique_id in active_agents_ids_disjunction:
+                        self.placement_table[unique_id - 1, rep] += len(self.model.active_speed_agents) + 1
+                for winner in self.model.active_speed_agents:
+                    self.placement_table[winner.unique_id - 1, rep] += 1
                 self._update_tables(rep * self.model_params["nb_agents"] + i)
+                if verbose:
+                    print(f"Finished Game {rep * self.model_params['nb_agents'] + i} at {datetime.now()}", flush=True)
+                    print(f"Current Evaluation Results: \n{self.win_table}\n{self.elimination_step_table}\n"
+                          f"{self.placement_table}\n{self.elimination_action_table}\n{self.agent_independent_table}\n", flush=True)
         self._process_results(repetitions, show, save)
 
     def _process_results(self, repetitions, show, save):
@@ -77,7 +111,13 @@ class Evaluator:
                                              columns=["EA Left", "EA Right", "EA Slow Down",
                                                       "EA Speed Up", "EA Change Nothing"])
 
-        agent_table = win_df.join(elimination_step_df).join(elimination_action_df)
+        placement_data = {"Placement Mean": [], "Placement Std": []}
+        for agent_data in self.placement_table:
+            placement_data["Placement Mean"].append(np.mean(agent_data))
+            placement_data["Placement Std"].append(np.mean(agent_data))
+        placement_df = pd.DataFrame(placement_data, index=index)
+
+        agent_table = win_df.join(elimination_step_df).join(elimination_action_df).join(placement_df)
 
         self.agent_independent_table[1] *= 100 / (self.model.width * self.model.height)  # convert to percentages
         agent_independent_df = pd.DataFrame({
@@ -99,7 +139,9 @@ class Evaluator:
         timestamp = datetime.now().strftime("%Y_%m_%d-%H_%M_%S")
 
         if save:
-            writer = pd.ExcelWriter(f"../../res/evaluation/eval_{timestamp}.xlsx", engine='xlsxwriter')
+            out_path = "/res/eval"
+            Path(out_path).mkdir(parents=True, exist_ok=True)
+            writer = pd.ExcelWriter(out_path + f"/eval_{timestamp}.xlsx", engine='xlsxwriter')
 
             agent_table.to_excel(writer, sheet_name='Agents')
             agent_independent_df.to_excel(writer, sheet_name='Global')
@@ -119,6 +161,7 @@ class Evaluator:
 
     def _init_tables(self, repetitions):
         self.win_table = np.zeros((self.model.nb_agents, 3))
+        self.placement_table = np.zeros((self.model.nb_agents, repetitions))
         self.elimination_step_table = np.zeros((self.model.nb_agents, repetitions))
         self.elimination_action_table = np.zeros((self.model.nb_agents, 5), dtype=np.int)
         self.agent_independent_table = np.empty((2, repetitions))

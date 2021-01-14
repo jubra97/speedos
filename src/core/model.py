@@ -237,9 +237,6 @@ class SpeedAgent(Agent, ABC):
 
         state = get_state(self.model, self, self.deadline)
         self.action = self.act(state)
-        if datetime.datetime.utcnow() > self.deadline:
-            print(f"Agent {self} exceeded Deadline by {datetime.datetime.utcnow() - self.deadline}!")
-            self.set_inactive()
 
     def advance(self):
         """
