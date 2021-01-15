@@ -10,10 +10,10 @@ COPY requirements.txt .
 RUN pip install --user -r requirements.txt
 
 # copy files
-COPY src/scripts/run_docker.py .
+COPY src/evaluation/run.py .
 COPY src/ src/
 
 COPY setup.py .
 RUN python setup.py build_ext --inplace
 
-CMD [ "python", "./run_docker.py" ]
+CMD [ "python", "./run.py" ]
