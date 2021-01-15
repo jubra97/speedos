@@ -576,7 +576,7 @@ class LiveAgent(SlidingWindowVoronoiAgent):
         p = multiprocessing.Process(target=self.depth_first_iterative_deepening, name="DFID",
                                     args=(move, reached_depth, state))
         p.start()
-        send_time = 1.5
+        send_time = 1
         deadline = datetime.datetime.strptime(state["deadline"], "%Y-%m-%dT%H:%M:%SZ")
         response = requests.get("https://msoll.de/spe_ed_time")
         server_time = datetime.datetime.strptime(response.json()["time"], "%Y-%m-%dT%H:%M:%SZ")
@@ -588,6 +588,8 @@ class LiveAgent(SlidingWindowVoronoiAgent):
             # Terminate foo
             p.terminate()
             p.join()
+
+        print(f"reached_depth: {reached_depth.value} on step {self.game_step}")
 
         self.game_step += 1
         return Action(move.value)
@@ -616,7 +618,7 @@ class ParallelLiveAgent(ParallelVoronoiAgent):
         [p.apply_async(self.depth_first_iterative_deepening_one_depth, (copy.deepcopy(game_state), depth),
                        callback=compare_depth) for depth in range(self.start_depth, 100)]
 
-        send_time = 2
+        send_time = 1
         deadline = datetime.datetime.strptime(game_state["deadline"], "%Y-%m-%dT%H:%M:%SZ")
         response = requests.get("https://msoll.de/spe_ed_time")
         server_time = datetime.datetime.strptime(response.json()["time"], "%Y-%m-%dT%H:%M:%SZ")
