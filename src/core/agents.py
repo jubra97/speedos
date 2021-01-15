@@ -1,17 +1,16 @@
 import copy
 import datetime
-import multiprocessing
+import multiprocessing, logging
 import time
 from itertools import permutations
 
 import numpy as np
 import requests
-from pynput import keyboard
 from scipy.spatial import distance
 
 from src.core.model import SpeedAgent
 from src.core.utils import Action, get_state, arg_maxes, state_to_model, model_to_json, reduce_state_to_sliding_window
-from src.core.voronoi import voronoi, voronoi_for_reduced_opponents
+from src.core.voronoi_cython import voronoi, voronoi_for_reduced_opponents
 
 
 class DummyAgent(SpeedAgent):
@@ -93,6 +92,7 @@ class NStepSurvivalAgent(SpeedAgent):
 class HumanAgent(SpeedAgent):
 
     def act(self, state):
+        from pynput import keyboard
         with keyboard.Events() as events:
             # Block for as much as possible
             input_key = events.get(1000000).key
@@ -145,6 +145,7 @@ class MultiMinimaxAgent(SpeedAgent):
             shared_move_var.value = move_to_make.value
             shared_dep.value = self.depth
             self.depth += 1
+
 
     def multi_minimax(self, depth, game_state):
         model, max_player, min_player_ids, is_endgame, move_to_make, max_move, alpha, actions = \
@@ -325,7 +326,7 @@ class VoronoiAgent(MultiMinimaxAgent):
     Agent that chooses an action based on the multi minimax algorithm and uses voronoi as evaluation
     """
 
-    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=4):
+    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=5):
         super().__init__(model, pos, direction, speed, active, time_for_move)
 
     def evaluate_position(self, model, max_player, min_player, depth):
@@ -390,13 +391,16 @@ class VoronoiAgent(MultiMinimaxAgent):
 
 class ParallelVoronoiAgent(VoronoiAgent):
 
-    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=4):
+    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=5):
         super().__init__(model, pos, direction, speed, active, time_for_move)
         self.start_depth = 2
         self.reached_depth = (False, 0)
         self.move_to_make = 4
         self.sub_evaluations = [self.win_evaluation, self.death_evaluation, self.voronoi_evaluation]
         self.weights = [float("inf"), 1000, 1]
+        self.cores = multiprocessing.cpu_count() - 1
+        if self.cores > 6:
+            self.cores = 6
 
     def act(self, state):
         self.reached_depth = (False, 0)
@@ -409,7 +413,7 @@ class ParallelVoronoiAgent(VoronoiAgent):
                 self.reached_depth = (result["with_voronoi"], result["depth"])
                 self.move_to_make = result["move_to_make"]
 
-        p = multiprocessing.Pool()
+        p = multiprocessing.Pool(self.cores)
 
         # also compute minimax without voronoi for depth 1 to not crash in others if voronoi computation needs too long.
         self.sub_evaluations = [self.win_evaluation, MultiMinimaxAgent.death_evaluation]
