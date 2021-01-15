@@ -183,8 +183,7 @@ class MultiMinimaxAgent(SpeedAgent):
         actions = self.init_actions()
         return model, max_player, min_player_ids, is_endgame, move_to_make, max_move, alpha, actions
 
-    def move_min_players(self, model, max_player, min_player_ids, min_move, depth, alpha, is_endgame,
-                         pre_state):
+    def move_min_players(self, model, max_player, min_player_ids, min_move, depth, alpha, is_endgame, pre_state):
         beta = float("inf")
         for min_player_id in min_player_ids:
             min_player = model.get_agent_by_id(min_player_id)
