@@ -64,8 +64,8 @@ class Evaluator:
                          "direction": start_dir[j % self.model_params["nb_agents"]]} for j in
                         range(i, self.model_params["nb_agents"] + i)]
                 for j in range(self.model_params["nb_agents"]):
-                    self.model_params["initial_agents_params"][i]["pos"] = args[i]["pos"]
-                    self.model_params["initial_agents_params"][i]["direction"] = args[i]["direction"]
+                    self.model_params["initial_agents_params"][j]["pos"] = args[j]["pos"]
+                    self.model_params["initial_agents_params"][j]["direction"] = args[j]["direction"]
 
                 if random_move_time:
                     move_time = np.random.uniform(5, 15)

@@ -125,8 +125,6 @@ class MultiMinimaxAgent(SpeedAgent):
         self.game_step += 1
 
     def act(self, state):
-        print("_____Single_____")
-        self.start = time.time()
         move = multiprocessing.Value('i', 4)
         reached_depth = multiprocessing.Value('i', 0)
         p = multiprocessing.Process(target=self.depth_first_iterative_deepening, name="DFID",
@@ -146,7 +144,6 @@ class MultiMinimaxAgent(SpeedAgent):
             move_to_make = self.multi_minimax(self.depth, game_state)
             shared_move_var.value = move_to_make.value
             shared_dep.value = self.depth
-            print(f"Reached Depth {self.depth} in {time.time() - self.start} and Action {move_to_make}")
             self.depth += 1
 
 
@@ -402,10 +399,11 @@ class ParallelVoronoiAgent(VoronoiAgent):
         self.move_to_make = 4
         self.sub_evaluations = [self.win_evaluation, self.death_evaluation, self.voronoi_evaluation]
         self.weights = [float("inf"), 1000, 1]
+        self.cores = multiprocessing.cpu_count() - 1
+        if self.cores > 6:
+            self.cores = 6
 
     def act(self, state):
-        print("_____Multi_____")
-        self.start = time.time()
         self.reached_depth = (False, 0)
         self.depth_first_iterative_deepening(state)
         return Action(self.move_to_make)
@@ -416,7 +414,7 @@ class ParallelVoronoiAgent(VoronoiAgent):
                 self.reached_depth = (result["with_voronoi"], result["depth"])
                 self.move_to_make = result["move_to_make"]
 
-        p = multiprocessing.Pool(multiprocessing.cpu_count()-1)
+        p = multiprocessing.Pool(self.cores)
 
         # also compute minimax without voronoi for depth 1 to not crash in others if voronoi computation needs too long.
         self.sub_evaluations = [self.win_evaluation, MultiMinimaxAgent.death_evaluation]
@@ -435,7 +433,6 @@ class ParallelVoronoiAgent(VoronoiAgent):
     def depth_first_iterative_deepening_one_depth(self, game_state, depth, with_voronoi):
         self.depth = depth
         move_to_make = self.multi_minimax(depth, game_state)
-        print(f"Calced for Depth {depth} in {time.time() - self.start}: {move_to_make}")
         return {"depth": depth, "move_to_make": move_to_make.value, "with_voronoi": with_voronoi}
 
     def evaluate_position(self, model, max_player, min_player, depth):
