@@ -14,4 +14,4 @@ if __name__ == '__main__':
                                       {"min_sliding_window_size": 15, "sliding_window_size_offset": 3}, {}]
         }
         evaluator = Evaluator(model_params)
-        evaluator.fair_start_evaluate(5, save=True, verbose=True, random_move_time=True, show=False)
+        evaluator.fair_start_evaluate(5, save=True, verbose=True, random_move_time=True)

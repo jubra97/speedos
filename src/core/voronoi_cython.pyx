@@ -1,12 +1,11 @@
+#cython: language_level=3
+
 import numpy as np
 
 from src.core.utils import Direction
 
 
 class Particle:
-    """
-    Class for particle for the voronoi / flooding algorithm
-    """
 
     def __init__(self, position, agent_id, direction):
         self.position = position
@@ -15,12 +14,6 @@ class Particle:
 
 
 def voronoi(model, max_agent_id):
-    """
-    Basic voronoi algorithm for every agent from the model
-    :param model: The model
-    :param max_agent_id: Id of the max agent
-    :return: voronoi cells, region_sizes (dict), is_endgame, all opponents that are in the same region
-    """
     is_endgame = True
     opponent_ids = []
     timestamp = model.schedule.steps
@@ -69,14 +62,6 @@ def voronoi(model, max_agent_id):
 
 
 def voronoi_for_reduced_opponents(model, max_agent_id, min_agent_id, is_endgame):
-    """
-    Voronoi algorithm for the ClosestOpponentsAgent, calculates voronoi only for the max and min agent.
-    :param model: The model
-    :param max_agent_id: Id of the max agent
-    :param min_agent_id: Id of the max agent
-    :param is_endgame: is endgame
-    :return: voronoi cells, region_sizes (dict), is_endgame
-    """
     timestamp = model.schedule.steps
     cells = model.cells
     width, height = model.width, model.height
@@ -121,13 +106,6 @@ def voronoi_for_reduced_opponents(model, max_agent_id, min_agent_id, is_endgame)
 
 
 def surrounding_cells(parent, width, height):
-    """
-    Generates new particles from a parent particle.
-    :param parent: The parent Particle
-    :param width: Width of the field
-    :param height: Height of the field
-    :return: The new particles
-    """
     particles = []
     x, y = parent.position
     directions = [(-1, 0, Direction.LEFT), (1, 0, Direction.RIGHT), (0, -1, Direction.UP), (0, 1, Direction.DOWN)]

@@ -10,7 +10,7 @@ from scipy.spatial import distance
 
 from src.core.model import SpeedAgent
 from src.core.utils import Action, get_state, arg_maxes, state_to_model, model_to_json, reduce_state_to_sliding_window
-from src.core.voronoi import voronoi, voronoi_for_reduced_opponents
+from src.core.voronoi_cython import voronoi, voronoi_for_reduced_opponents
 
 
 class DummyAgent(SpeedAgent):
@@ -146,6 +146,7 @@ class MultiMinimaxAgent(SpeedAgent):
             shared_dep.value = self.depth
             self.depth += 1
 
+
     def multi_minimax(self, depth, game_state):
         model, max_player, min_player_ids, is_endgame, move_to_make, max_move, alpha, actions = \
             self.init_multi_minimax(game_state)
@@ -154,7 +155,6 @@ class MultiMinimaxAgent(SpeedAgent):
                 continue
             if action == Action.SPEED_UP and max_player.speed >= 3 and not is_endgame:
                 continue
-            tree_path = str(action.value)
             pre_state = model_to_json(model, trace_aware=True, step=True)
             self.update_model(model, max_player, action)
             if is_endgame:
@@ -162,7 +162,7 @@ class MultiMinimaxAgent(SpeedAgent):
             min_move = float("inf")
 
             model, max_player, min_move, alpha = self.move_min_players(model, max_player, min_player_ids, min_move,
-                                                                       depth, alpha, is_endgame, tree_path, pre_state)
+                                                                       depth, alpha, is_endgame, pre_state)
             move_to_make, max_move, alpha = self.update_move_to_make(min_move, move_to_make, action, max_move, alpha)
 
         return move_to_make
@@ -183,13 +183,12 @@ class MultiMinimaxAgent(SpeedAgent):
         actions = self.init_actions()
         return model, max_player, min_player_ids, is_endgame, move_to_make, max_move, alpha, actions
 
-    def move_min_players(self, model, max_player, min_player_ids, min_move, depth, alpha, is_endgame, tree_path,
-                         pre_state):
+    def move_min_players(self, model, max_player, min_player_ids, min_move, depth, alpha, is_endgame, pre_state):
         beta = float("inf")
         for min_player_id in min_player_ids:
             min_player = model.get_agent_by_id(min_player_id)
             min_move = min(min_move, self.minimax(max_player, min_player, depth - 1, alpha, beta, False, model,
-                                                  is_endgame, tree_path))
+                                                  is_endgame))
             model, max_player, _ = self.reset_model(pre_state, max_player, min_player)
 
             beta = min_move
@@ -208,18 +207,18 @@ class MultiMinimaxAgent(SpeedAgent):
             alpha = max_move
         return move_to_make, max_move, alpha
 
-    def minimax(self, max_player, min_player, depth, alpha, beta, is_max, model, is_endgame, tree_path):
+    def minimax(self, max_player, min_player, depth, alpha, beta, is_max, model, is_endgame):
         # termination
         if depth == 0 or not max_player.active or not model.running:
-            return self.evaluate_position(model, max_player, min_player, depth, tree_path)
+            return self.evaluate_position(model, max_player, min_player, depth)
 
         # recursion
         if is_max or is_endgame:
-            return self.max(max_player, min_player, depth, alpha, beta, model, is_endgame, tree_path)
+            return self.max(max_player, min_player, depth, alpha, beta, model, is_endgame)
         else:
-            return self.min(max_player, min_player, depth, alpha, beta, model, is_endgame, tree_path)
+            return self.min(max_player, min_player, depth, alpha, beta, model, is_endgame)
 
-    def max(self, max_player, min_player, depth, alpha, beta, model, is_endgame, tree_path):
+    def max(self, max_player, min_player, depth, alpha, beta, model, is_endgame):
         max_move = float("-inf")
         pre_state = model_to_json(model, trace_aware=True, step=True)
         sorted_action_list = self.init_actions()
@@ -229,13 +228,12 @@ class MultiMinimaxAgent(SpeedAgent):
                 continue
             if action == Action.SPEED_UP and max_player.speed >= 3 and not is_endgame:
                 continue
-            tree_path += str(action.value)
 
             self.update_model(model, max_player, action)
             if is_endgame:
                 model.schedule.steps += 1
             max_move = max(max_move, self.minimax(max_player, min_player, depth - 1, alpha, beta, False, model,
-                                                  is_endgame, tree_path))
+                                                  is_endgame))
             model, max_player, min_player = self.reset_model(pre_state, max_player, min_player)
 
             alpha = max(alpha, max_move)
@@ -243,18 +241,17 @@ class MultiMinimaxAgent(SpeedAgent):
                 break
         return max_move
 
-    def min(self, max_player, min_player, depth, alpha, beta, model, is_endgame, tree_path):
+    def min(self, max_player, min_player, depth, alpha, beta, model, is_endgame):
         min_move = float("inf")
         pre_state = model_to_json(model, trace_aware=True, step=True)
         sorted_action_list = self.init_actions()
 
         for action in list(sorted_action_list):
-            tree_path += str(action.value)
 
             self.update_model(model, min_player, action)
             model.schedule.steps += 1
             min_move = min(min_move, self.minimax(max_player, min_player, depth - 1, alpha, beta, True, model,
-                                                  is_endgame, tree_path))
+                                                  is_endgame))
             model, max_player, min_player = self.reset_model(pre_state, max_player, min_player)
 
             beta = min(beta, min_move)
@@ -280,22 +277,22 @@ class MultiMinimaxAgent(SpeedAgent):
         min_player = model.get_agent_by_id(min_player_id)
         return model, max_player, min_player
 
-    def evaluate_position(self, model, max_player, min_player, depth, tree_path):
+    def evaluate_position(self, model, max_player, min_player, depth):
         sub_evaluations = [self.win_evaluation, self.death_evaluation]
         weights = [float("inf"), 1]
-        result = self.prioritised_evaluation(sub_evaluations, weights, model, max_player, min_player, depth, tree_path)
+        result = self.prioritised_evaluation(sub_evaluations, weights, model, max_player, min_player, depth)
 
         return result
 
     @staticmethod
-    def win_evaluation(model, max_player, min_player, depth, tree_path):
+    def win_evaluation(model, max_player, min_player, depth):
         if max_player.active and not min_player.active:
             return 1
         else:
             return None
 
     @staticmethod
-    def death_evaluation(model, max_player, min_player, depth, tree_path):
+    def death_evaluation(model, max_player, min_player, depth):
         if not max_player.active:
             # subtract a high number if agent died (otherwise dying in the last step is as good as survival)
             death_penalty = 1000
@@ -329,17 +326,17 @@ class VoronoiAgent(MultiMinimaxAgent):
     Agent that chooses an action based on the multi minimax algorithm and uses voronoi as evaluation
     """
 
-    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=4):
+    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=5):
         super().__init__(model, pos, direction, speed, active, time_for_move)
 
-    def evaluate_position(self, model, max_player, min_player, depth, tree_path):
+    def evaluate_position(self, model, max_player, min_player, depth):
         sub_evaluations = [self.win_evaluation, self.death_evaluation, self.voronoi_evaluation]
         weights = [float("inf"), 1000, 1]
-        result = self.prioritised_evaluation(sub_evaluations, weights, model, max_player, min_player, depth, tree_path)
+        result = self.prioritised_evaluation(sub_evaluations, weights, model, max_player, min_player, depth)
 
         return result
 
-    def death_evaluation(self, model, max_player, min_player, depth, tree_path):
+    def death_evaluation(self, model, max_player, min_player, depth):
         if not max_player.active:
             death_eval = -depth - 1  # -1 to keep negative when depth is 0
             if not min_player.active:
@@ -347,7 +344,7 @@ class VoronoiAgent(MultiMinimaxAgent):
                 death_eval += 0.1
             return death_eval / self.depth
 
-    def voronoi_evaluation(self, model, max_player, min_player, depth, tree_path):
+    def voronoi_evaluation(self, model, max_player, min_player, depth):
         # only use the territory bonus as a tie breaker between positions with equal voronoi value
         territory_bonus_weight = 0.0001
         # for normalization
@@ -394,13 +391,16 @@ class VoronoiAgent(MultiMinimaxAgent):
 
 class ParallelVoronoiAgent(VoronoiAgent):
 
-    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=4):
+    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=5):
         super().__init__(model, pos, direction, speed, active, time_for_move)
         self.start_depth = 2
         self.reached_depth = (False, 0)
         self.move_to_make = 4
         self.sub_evaluations = [self.win_evaluation, self.death_evaluation, self.voronoi_evaluation]
         self.weights = [float("inf"), 1000, 1]
+        self.cores = multiprocessing.cpu_count() - 1
+        if self.cores > 6:
+            self.cores = 6
 
     def act(self, state):
         self.reached_depth = (False, 0)
@@ -413,7 +413,7 @@ class ParallelVoronoiAgent(VoronoiAgent):
                 self.reached_depth = (result["with_voronoi"], result["depth"])
                 self.move_to_make = result["move_to_make"]
 
-        p = multiprocessing.Pool()
+        p = multiprocessing.Pool(self.cores)
 
         # also compute minimax without voronoi for depth 1 to not crash in others if voronoi computation needs too long.
         self.sub_evaluations = [self.win_evaluation, MultiMinimaxAgent.death_evaluation]
@@ -434,9 +434,8 @@ class ParallelVoronoiAgent(VoronoiAgent):
         move_to_make = self.multi_minimax(depth, game_state)
         return {"depth": depth, "move_to_make": move_to_make.value, "with_voronoi": with_voronoi}
 
-    def evaluate_position(self, model, max_player, min_player, depth, tree_path):
-        result = self.prioritised_evaluation(self.sub_evaluations, self.weights, model, max_player, min_player, depth,
-                                             tree_path)
+    def evaluate_position(self, model, max_player, min_player, depth):
+        result = self.prioritised_evaluation(self.sub_evaluations, self.weights, model, max_player, min_player, depth)
         return result
 
 
@@ -552,9 +551,9 @@ class LiveAgent(SlidingWindowVoronoiAgent):
     """
     Live Agent
     """
-
-    def init(self, model, pos, direction, speed=1, active=True):
+    def __init__(self, model, pos, direction, speed=1, active=True, server_time_url="https://msoll.de/spe_ed_time"):
         super().__init__(model, pos, direction, speed, active)
+        self.server_time_url = server_time_url
 
     def act(self, state):
         model = state_to_model(state)
@@ -576,9 +575,9 @@ class LiveAgent(SlidingWindowVoronoiAgent):
         p = multiprocessing.Process(target=self.depth_first_iterative_deepening, name="DFID",
                                     args=(move, reached_depth, state))
         p.start()
-        send_time = 1.5
+        send_time = 1
         deadline = datetime.datetime.strptime(state["deadline"], "%Y-%m-%dT%H:%M:%SZ")
-        response = requests.get("https://msoll.de/spe_ed_time")
+        response = requests.get(self.server_time_url)
         server_time = datetime.datetime.strptime(response.json()["time"], "%Y-%m-%dT%H:%M:%SZ")
         av_time = (deadline - server_time).total_seconds() - send_time
         p.join(av_time)
@@ -588,6 +587,8 @@ class LiveAgent(SlidingWindowVoronoiAgent):
             # Terminate foo
             p.terminate()
             p.join()
+
+        print(f"reached_depth: {reached_depth.value} on step {self.game_step}")
 
         self.game_step += 1
         return Action(move.value)
@@ -616,7 +617,7 @@ class ParallelLiveAgent(ParallelVoronoiAgent):
         [p.apply_async(self.depth_first_iterative_deepening_one_depth, (copy.deepcopy(game_state), depth),
                        callback=compare_depth) for depth in range(self.start_depth, 100)]
 
-        send_time = 2
+        send_time = 1
         deadline = datetime.datetime.strptime(game_state["deadline"], "%Y-%m-%dT%H:%M:%SZ")
         response = requests.get("https://msoll.de/spe_ed_time")
         server_time = datetime.datetime.strptime(response.json()["time"], "%Y-%m-%dT%H:%M:%SZ")
