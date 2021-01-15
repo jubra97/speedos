@@ -3,7 +3,7 @@ import datetime
 import json
 import os
 import random
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 
 import numpy as np
 from mesa import Agent
@@ -11,8 +11,8 @@ from mesa import Model
 from mesa.space import MultiGrid
 from mesa.time import SimultaneousActivation
 
-from src.utils import Direction, Action, get_state
-from src.utils import model_to_json
+from src.core.utils import Direction, Action, get_state
+from src.core.utils import model_to_json
 
 
 class SpeedModel(Model):
@@ -21,7 +21,7 @@ class SpeedModel(Model):
     """
 
     def __init__(self, width, height, nb_agents, agent_classes, initial_agents_params=None, cells=None,
-                 data_collector=None, verbose=False, save=False):
+                 data_collector=None, save=False):
         """
         :param initial_agents_params: A list of dictionaries containing initialization parameters for agents
         that should be initialized at the start of the simulation
@@ -32,7 +32,6 @@ class SpeedModel(Model):
         self.width = width
         self.height = height
         self.nb_agents = nb_agents
-        self.verbose = verbose
         self.save = save
         if self.save:
             self.history = []
@@ -141,8 +140,6 @@ class SpeedModel(Model):
         """
         if len(self.active_speed_agents) <= 1:
             self.running = False
-            if self.verbose:
-                self.print_standings()
             if self.save:
                 self.history.append(copy.deepcopy(model_to_json(self)))
                 path = os.path.abspath("") + "/res/simulatedGames/"
@@ -150,21 +147,6 @@ class SpeedModel(Model):
                     entry["cells"] = entry["cells"].tolist()
                 with open(path + datetime.datetime.now().strftime("%d-%m-%y__%H-%M-%S-%f") + ".json", "w") as f:
                     json.dump(self.history, f, indent=4)
-
-    def print_standings(self):
-        """
-        Print the amount of survived steps of each agent.
-        :return:
-        """
-        result = list(map(
-            lambda agent: {"ID: ": agent.unique_id, "Survived Steps: ": agent.elimination_step},
-            self.speed_agents
-        ))
-        if len(self.active_speed_agents) == 1:
-            print('Winning Agent: ' + str(self.active_speed_agents[0].unique_id))
-        else:
-            print('Draw')
-        print("Standings after {} rounds:\n".format(self.schedule.steps), result)
 
     def add_agent(self, agent):
         """
@@ -200,7 +182,7 @@ class SpeedModel(Model):
         return None
 
 
-class SpeedAgent(Agent):
+class SpeedAgent(Agent, ABC):
     """
     Abstract representation of an Agent in Speed.
     """
@@ -255,9 +237,6 @@ class SpeedAgent(Agent):
 
         state = get_state(self.model, self, self.deadline)
         self.action = self.act(state)
-        if datetime.datetime.utcnow() > self.deadline:
-            print(f"Agent {self} exceeded Deadline by {datetime.datetime.utcnow() - self.deadline}!")
-            self.set_inactive()
 
     def advance(self):
         """

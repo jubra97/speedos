@@ -1,62 +1,11 @@
 import unittest
 
 import numpy as np
-from mesa import Model
 
-from src.agents import NStepSurvivalAgent
-from src.model import SpeedAgent
-from src.model import SpeedModel
-from src.utils import *
-from src.voronoi import voronoi
-
-
-class TestAgentToJson(unittest.TestCase):
-
-    def setUp(self):
-        self.model = Model()
-
-    def test_default_params(self):
-        agent = SpeedAgent(self.model, (5, 23), Direction.UP)
-        self.assertEqual(
-            agent_to_json(agent),
-            {
-                "x": 5,
-                "y": 23,
-                "direction": "up",
-                "speed": 1,
-                "active": True
-            }
-        )
-
-    def test_non_default_params(self):
-        agent = SpeedAgent(self.model, (5, 23), Direction.UP, 9, False)
-        self.assertEqual(
-            agent_to_json(agent),
-            {
-                "x": 5,
-                "y": 23,
-                "direction": "up",
-                "speed": 9,
-                "active": False
-            }
-        )
-
-
-class TestArgMaxes(unittest.TestCase):
-
-    def test_empty(self):
-        self.assertEqual(arg_maxes([], indices=None), [])
-
-    def test_one_max(self):
-        self.assertEqual(arg_maxes([1], indices=None), [0])
-        self.assertEqual(arg_maxes([-1, 0, 5, 4], indices=None), [2])
-        self.assertEqual(arg_maxes([-1, -4, -3], indices=None), [0])
-        self.assertEqual(arg_maxes([-1, -4, -3], indices=['a', 'b', 'c']), ['a'])
-
-    def test_multiple_maxes(self):
-        self.assertEqual(arg_maxes([-1, 5, 5, 4], indices=None), [1, 2])
-        self.assertEqual(arg_maxes([-1, -1, -10, -1], indices=None), [0, 1, 3])
-        self.assertEqual(arg_maxes([-1, -1, -10, -1], indices=['a', 'b', 'c', 'd']), ['a', 'b', 'd'])
+from src.core.agents import NStepSurvivalAgent
+from src.core.model import SpeedModel
+from src.core.utils import Direction
+from src.core.voronoi import voronoi, voronoi_for_reduced_opponents, Particle, surrounding_cells
 
 
 class TestVoronoi(unittest.TestCase):
@@ -124,4 +73,51 @@ class TestVoronoi(unittest.TestCase):
         self.assertEqual({0: 10, 1: 4, 2: 1}, region_sizes)
         self.assertEqual(True, is_endgame)
 
+    def test_voronoi_for_reduced_opponents(self):
+        initial_agents_params = [
+            {"pos": (2, 4), "direction": Direction.DOWN, "deterministic": True, "depth": 1},
+            {"pos": (6, 1), "direction": Direction.LEFT, "deterministic": True, "depth": 1}
+        ]
+        model = SpeedModel(width=10, height=10, nb_agents=2, initial_agents_params=initial_agents_params,
+                           agent_classes=[NStepSurvivalAgent for _ in range(2)])
 
+        particle_cells, region_sizes, is_endgame = \
+            voronoi_for_reduced_opponents(model, model.active_speed_agents[0].unique_id,
+                                          model.active_speed_agents[1].unique_id,
+                                          False)
+        self.assertEqual({1: 48, 2: 50}, region_sizes)
+        self.assertEqual(False, is_endgame)
+
+        # run for 5 steps and tests again
+        for _ in range(5):
+            model.step()
+
+        particle_cells, region_sizes, is_endgame = \
+            voronoi_for_reduced_opponents(model, model.active_speed_agents[0].unique_id,
+                                          model.active_speed_agents[1].unique_id,
+                                          False)
+        self.assertEqual({1: 53, 2: 35}, region_sizes)
+        self.assertEqual(False, is_endgame)
+
+
+class TestSurroundingCells(unittest.TestCase):
+
+    def test_surrounding_cells(self):
+        parent = Particle((5, 5), 1, Direction.DOWN)
+        particles = surrounding_cells(parent, 20, 20)
+        all_pos = [p.position for p in particles]
+
+        self.assertEqual(len(particles), 3)
+        self.assertTrue((6, 5) in all_pos)
+        self.assertTrue((4, 5) in all_pos)
+        self.assertTrue((5, 6) in all_pos)
+        self.assertFalse((5, 4) in all_pos)
+
+        parent = Particle((0, 0), 1, Direction.DOWN)
+        particles = surrounding_cells(parent, 20, 20)
+        all_pos = [p.position for p in particles]
+
+        self.assertEqual(len(particles), 2)
+        self.assertTrue((0, 1) in all_pos)
+        self.assertTrue((1, 0) in all_pos)
+        self.assertFalse((1, 1) in all_pos)

@@ -5,7 +5,7 @@ import os
 
 import websockets
 
-from src.agents import LiveAgent
+from src.core.agents import LiveAgent
 
 API_KEY = "IXT57ZEJMO6VFKF3KBZFB4LSEXBMWJ72VEYO2B6WT25UOXEIEAEN25XO"
 

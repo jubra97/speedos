@@ -7,7 +7,7 @@ from time import sleep
 
 import websockets
 
-from src.agents import LiveAgent
+from src.core.agents import LiveAgent
 
 API_KEY = "IXT57ZEJMO6VFKF3KBZFB4LSEXBMWJ72VEYO2B6WT25UOXEIEAEN25XO"
 
@@ -65,8 +65,6 @@ class RunOnline:
                     action = self.agent.act(message)
                     respond = str(action)
                     respond = f'{{"action": "{respond}"}}'
-                    if datetime.utcnow() > deadline:
-                        self.write_log(f"Missed deadline by {(datetime.utcnow() - deadline).total_seconds()}.")
                     try:
                         await self.connection.send(respond)
                     except Exception as e:

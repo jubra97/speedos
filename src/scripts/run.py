@@ -1,9 +1,7 @@
-from src.agents import NStepSurvivalAgent, MultiprocessedVoronoiMultiMiniMaxAgent, VoronoiMultiMiniMaxAgent, \
-    BaseMultiMiniMaxAgent
-from src.model import SpeedModel
+
+from src.core.agents import ParallelVoronoiAgent
+from src.core.model import SpeedModel
 
 if __name__ == "__main__":
-    model = SpeedModel(60, 60, 2,
-                       agent_classes=[MultiprocessedVoronoiMultiMiniMaxAgent, MultiprocessedVoronoiMultiMiniMaxAgent],
-                       verbose=True)
+    model = SpeedModel(6, 6, 2, agent_classes=[ParallelVoronoiAgent, ParallelVoronoiAgent])
     model.run_model()

@@ -13,4 +13,7 @@ RUN pip install --user -r requirements.txt
 COPY src/scripts/run_docker.py .
 COPY src/ src/
 
+COPY setup.py .
+RUN python setup.py build_ext --inplace
+
 CMD [ "python", "./run_docker.py" ]
