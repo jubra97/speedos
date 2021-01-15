@@ -1,7 +1,5 @@
 import copy
 from enum import Enum
-import json
-import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -166,17 +164,3 @@ def reduce_state_to_sliding_window(state, distance_to_next_opponent, min_sliding
     state["cells"] = new_cells.tolist()
 
     return state
-
-
-def visualize_online_games(data_path, start, end):
-    for i in range(start, end+1):
-        path_to_json = f"{data_path}{i}.json"
-
-        with open(path_to_json, encoding="utf-8") as f:
-            data = json.load(f)
-
-        cells = np.asarray(data["cells"])
-
-        plt.imshow(cells)
-        plt.show()
-        continue
