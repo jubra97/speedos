@@ -1,6 +1,6 @@
 import copy
 import datetime
-import multiprocessing, logging
+import multiprocessing
 import time
 from itertools import permutations
 
