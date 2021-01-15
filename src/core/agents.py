@@ -1,6 +1,6 @@
 import copy
 import datetime
-import multiprocessing, logging
+import multiprocessing
 import time
 from itertools import permutations
 
@@ -551,9 +551,9 @@ class LiveAgent(SlidingWindowVoronoiAgent):
     """
     Live Agent
     """
-
-    def init(self, model, pos, direction, speed=1, active=True):
+    def __init__(self, model, pos, direction, speed=1, active=True, server_time_url="https://msoll.de/spe_ed_time"):
         super().__init__(model, pos, direction, speed, active)
+        self.server_time_url = server_time_url
 
     def act(self, state):
         model = state_to_model(state)
@@ -577,7 +577,7 @@ class LiveAgent(SlidingWindowVoronoiAgent):
         p.start()
         send_time = 1
         deadline = datetime.datetime.strptime(state["deadline"], "%Y-%m-%dT%H:%M:%SZ")
-        response = requests.get("https://msoll.de/spe_ed_time")
+        response = requests.get(self.server_time_url)
         server_time = datetime.datetime.strptime(response.json()["time"], "%Y-%m-%dT%H:%M:%SZ")
         av_time = (deadline - server_time).total_seconds() - send_time
         p.join(av_time)
