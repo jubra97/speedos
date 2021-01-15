@@ -12,7 +12,7 @@ from src.core.utils import Direction, Action, state_to_model, get_state
 class TestModelValidity(unittest.TestCase):
 
     def setUp(self):
-        self.original_games_path = os.path.abspath("../..") + "../../res/originalGames/"
+        self.original_games_path = os.path.abspath("../..") + "/res/originalGames/"
         self.test_games = os.listdir(self.original_games_path)
         self.model = Model()
         self.maxDiff = None
