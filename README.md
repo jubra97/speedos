@@ -5,6 +5,13 @@ Unsere Lösung zum [InformatiCup 2021](https://github.com/informatiCup/Informati
 
 Wir verwenden eine Erweiterung des Minimax-Algorithmus aus der Spieltheorie. Dieser wird angepasst zum Multi-Minimax für mehrere Gegner und mittels Voronoi werden Spielsituationen evaluiert.
 
+## Requirements Installieren
+Folgende Befehle im Projektordner ausführen:
+```shell
+pip install -r requirements.txt
+python setup.py build_ext --inplace
+```
+
 ## Software
 
 Das grundlegende Modell ist im Mesa-Framework geschrieben. Ein generischer Agent wird dank Modularität und Vererbung zu Agenten erweitert, die verschiedene Lösungen implementieren. Das Modell kann sehr einfach gestartet und konfiguriert werden: 
