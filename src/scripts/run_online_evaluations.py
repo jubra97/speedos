@@ -15,7 +15,6 @@ API_KEY = "IXT57ZEJMO6VFKF3KBZFB4LSEXBMWJ72VEYO2B6WT25UOXEIEAEN25XO"
 class RunOnline:
     def __init__(self, agent=LiveAgent, save_files_dir=None, log_file_dir=None):
         self.connection = None
-        #self.history = []
         self.agent = agent(None, None, None)
         self.loop = asyncio.get_event_loop()
         self.tasks = []
@@ -54,7 +53,6 @@ class RunOnline:
                     deadline = datetime.strptime(message["deadline"], "%Y-%m-%dT%H:%M:%SZ")
                     r_time = (deadline - time_msg_recv).total_seconds()
                     response_times.append(r_time)
-                #self.history.append(message)
                 if message["running"] is False:
                     if self.save_files_dir is not None:
                         with open(f"{self.save_files_dir}/{run_number}.json", "w") as f:
