@@ -4,10 +4,9 @@ from mesa.visualization.ModularVisualization import ModularServer
 from mesa.visualization.UserParam import UserSettableParameter
 from mesa.visualization.modules import CanvasGrid
 
-from src.core.agents import ParallelVoronoiAgent, VoronoiAgent
+from src.core.agents import ParallelVoronoiAgent
 from src.core.model import SpeedAgent, AgentTrace, AgentTraceCollision
 from src.core.model import SpeedModel
-from src.core.utils import Direction
 
 
 class CustomCanvasGrid(CanvasGrid):
@@ -59,8 +58,8 @@ def agent_portrayal(agent):
 
 if __name__ == "__main__":
     # Parameters
-    WIDTH = 40
-    HEIGHT = 40
+    WIDTH = 35
+    HEIGHT = 35
     COLOR_PALETTE = [
         'green',
         'blue',
@@ -69,17 +68,12 @@ if __name__ == "__main__":
         'pink',
         'orange'
     ]
-    initial_agents_params = [{"pos": (29, 29), "direction": Direction.UP},
-                             {"pos": (10, 10), "direction": Direction.DOWN},
-                             {"pos": (29, 10), "direction": Direction.DOWN},
-                             {"pos": (10, 29), "direction": Direction.UP}]
     model_params = {
         "width": WIDTH,
         "height": HEIGHT,
-        "agent_classes": [ParallelVoronoiAgent, ParallelVoronoiAgent, VoronoiAgent, VoronoiAgent],
-        "nb_agents": UserSettableParameter('slider', 'Amount of Agents', value=4, min_value=1, max_value=6, step=1),
-        "save": True,
-        "initial_agents_params": initial_agents_params
+        "agent_classes": [ParallelVoronoiAgent, ParallelVoronoiAgent, ParallelVoronoiAgent],
+        "nb_agents": UserSettableParameter('slider', 'Amount of Agents', value=3, min_value=1, max_value=6, step=1),
+        "save": True
     }
     grid = CustomCanvasGrid(agent_portrayal, WIDTH, HEIGHT, 700, 700)
 
