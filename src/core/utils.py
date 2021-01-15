@@ -4,6 +4,9 @@ import numpy as np
 
 
 class Direction(Enum):
+    """
+    Class to describe the possible directions in the game as Enum.
+    """
     UP = 0
     RIGHT = 1
     DOWN = 2
@@ -14,6 +17,9 @@ class Direction(Enum):
 
 
 class Action(Enum):
+    """
+    Class to describe the possible actions in the game as Enum.
+    """
     TURN_LEFT = 0
     TURN_RIGHT = 1
     SLOW_DOWN = 2
@@ -25,11 +31,23 @@ class Action(Enum):
 
 
 def out_of_bounds(cell_size, pos) -> bool:
+    """
+    Checks whether a position is out of the game board.
+    :param cell_size: Board size as array
+    :param pos: tuple (x, y)
+    :return: bool
+    """
     x, y = pos
     return x < 0 or x >= cell_size[1] or y < 0 or y >= cell_size[0]
 
 
 def agent_to_json(agent, trace_aware=False):
+    """
+    Converts agent to JSON string
+    :param agent: the agent
+    :param trace_aware: include traces
+    :return: json string with x, y, direction, speed, active
+    """
     x, y = agent.pos
     agent_json = {
         "x": x,
@@ -44,6 +62,13 @@ def agent_to_json(agent, trace_aware=False):
 
 
 def model_to_json(model, trace_aware=False, step=False):
+    """
+    Converts the model to JSON string
+    :param model: the model
+    :param trace_aware: include traces
+    :param step: current game step
+    :return: JSON string with width, height, cells, players, running, [step]
+    """
     players = dict()
     for agent in model.speed_agents:
         players[str(agent.unique_id)] = agent_to_json(agent, trace_aware)
@@ -61,6 +86,14 @@ def model_to_json(model, trace_aware=False, step=False):
 
 
 def get_state(model, agent, deadline=None, step=False):
+    """
+    Gets model state and sets id for current player
+    :param model: the model
+    :param agent: current agent
+    :param deadline: optional deadline for move
+    :param step: current game step
+    :return: JSON string of state
+    """
     state = model_to_json(model, step=step)
     state["you"] = agent.unique_id
     if deadline is not None:
@@ -69,6 +102,12 @@ def get_state(model, agent, deadline=None, step=False):
 
 
 def arg_maxes(arr, indices=None):
+    """
+    Get indices of all maximal values in array
+    :param arr: the array
+    :param indices: optional permutation on indices
+    :return: array with indices of maxima
+    """
     if len(arr) == 0:
         return []
 
@@ -84,6 +123,15 @@ def arg_maxes(arr, indices=None):
 
 
 def state_to_model(state, initialize_cells=False, agent_classes=None, additional_params=None, trace_aware=False):
+    """
+    Convert JSON state to model
+    :param state: JSON string
+    :param initialize_cells: initialize cells
+    :param agent_classes: agent classes
+    :param additional_params: additional params
+    :param trace_aware: include traces
+    :return: model
+    """
     # import here to avoid cyclic imports
     from src.core.model import SpeedModel
     from src.core.agents import DummyAgent
@@ -121,6 +169,14 @@ def state_to_model(state, initialize_cells=False, agent_classes=None, additional
 
 def reduce_state_to_sliding_window(state, distance_to_next_opponent, min_sliding_window_size,
                                    sliding_window_size_offset=3):
+    """
+    Reduces the state to a smaller window around the agent
+    :param state: the tstae
+    :param distance_to_next_opponent: distance to next opponent to include
+    :param min_sliding_window_size: minimum window size
+    :param sliding_window_size_offset: offset
+    :return: reduced state
+    """
     cells = np.array(state["cells"])
     pos = (state["players"][str(state["you"])]["y"], state["players"][str(state["you"])]["x"])
 
