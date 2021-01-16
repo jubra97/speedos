@@ -90,7 +90,9 @@ class NStepSurvivalAgent(SpeedAgent):
 
 
 class HumanAgent(SpeedAgent):
-
+    """
+    Agent that allows to play our simulation interactively.
+    """
     def act(self, state):
         from pynput import keyboard
         with keyboard.Events() as events:
@@ -111,7 +113,7 @@ class HumanAgent(SpeedAgent):
 
 class MultiMinimaxAgent(SpeedAgent):
     """
-    Agent that chooses an action based on the multi minimax algorithm
+    Agent that chooses an action based on the multi minimax algorithm.
     """
 
     def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=4):
@@ -390,6 +392,10 @@ class VoronoiAgent(MultiMinimaxAgent):
 
 
 class ParallelVoronoiAgent(VoronoiAgent):
+    """
+    Agent that chooses an action based on the multi minimax algorithm and uses voronoi as evaluation. It is extended
+    by multiprocessing to speed up the computation time.
+    """
 
     def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=5):
         super().__init__(model, pos, direction, speed, active, time_for_move)
@@ -441,7 +447,8 @@ class ParallelVoronoiAgent(VoronoiAgent):
 
 class ClosestOpponentsVoronoiAgent(VoronoiAgent):
     """
-    Agent that chooses an action based on the multi minimax algorithm and uses voronoi as evaluation
+    Agent that chooses an action based on the multi minimax algorithm and uses voronoi as evaluation. Only reachable
+    opponents are considered.
     """
 
     def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=4):
@@ -481,6 +488,10 @@ class ClosestOpponentsVoronoiAgent(VoronoiAgent):
 
 
 class SlidingWindowVoronoiAgent(ClosestOpponentsVoronoiAgent):
+    """
+    Agent that chooses an action based on the multi minimax algorithm and uses voronoi as evaluation. The model for
+    the simulation is reduced by computing a sliding window that moves with the head of our agent.
+    """
 
     def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=4, min_sliding_window_size=15,
                  sliding_window_size_offset=5):
@@ -519,6 +530,11 @@ class SlidingWindowVoronoiAgent(ClosestOpponentsVoronoiAgent):
 
 
 class ParallelSlidingWindowVoronoiAgent(ParallelVoronoiAgent):
+    """
+    Agent that chooses an action based on the multi minimax algorithm and uses voronoi as evaluation. The model for
+    the simulation is reduced by computing a sliding window that moves with the head of our agent. It is extended
+    by multiprocessing to speed up the computation time.
+    """
     def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=4, min_sliding_window_size=12,
                  sliding_window_size_offset=3):
         super().__init__(model, pos, direction, speed, active, time_for_move)
@@ -549,7 +565,7 @@ class ParallelSlidingWindowVoronoiAgent(ParallelVoronoiAgent):
 
 class LiveAgent(SlidingWindowVoronoiAgent):
     """
-    Live Agent
+    Agent that plays the online game. The agent behind this is the SlidingWindowVoronoiAgent.
     """
     def __init__(self, model, pos, direction, speed=1, active=True, server_time_url="https://msoll.de/spe_ed_time"):
         super().__init__(model, pos, direction, speed, active)
@@ -594,8 +610,10 @@ class LiveAgent(SlidingWindowVoronoiAgent):
         return Action(move.value)
 
 
-class ParallelLiveAgent(ParallelVoronoiAgent):
-
+class ParallelLiveAgent(ParallelSlidingWindowVoronoiAgent):
+    """
+    Agent that plays the online game. The agent behind this is the SlidingWindowVoronoiAgent.
+    """
     def __init__(self, model, pos, direction, speed=1, active=True):
         super().__init__(model, pos, direction, speed, active)
 
