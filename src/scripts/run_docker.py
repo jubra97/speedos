@@ -27,7 +27,9 @@ class RunDocker:
             try:
                 message = await self.connection.recv()
                 message = json.loads(message)
-                if message["players"][str(message["you"])]["active"]:
+                if message["running"] is False or message["players"][str(message["you"])]["active"] is False:
+                    break
+                else:
                     action = self.agent.act(message)
                     respond = str(action)
                     respond = f'{{"action": "{respond}"}}'
