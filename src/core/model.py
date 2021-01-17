@@ -17,15 +17,23 @@ from src.core.utils import model_to_json
 
 class SpeedModel(Model):
     """
-    Model of the game "Speed". This class controls the execution of the simulation.
+    Model of the game "Spe_ed". This class controls the execution of the simulation.
     """
 
     def __init__(self, width, height, nb_agents, agent_classes, initial_agents_params=None, cells=None,
                  data_collector=None, save=False):
         """
-        :param initial_agents_params: A list of dictionaries containing initialization parameters for agents
-        that should be initialized at the start of the simulation
-        :param data_collector:
+        Model-Initialization.
+        :param width: Width of the field
+        :param height: Height of the field
+        :param nb_agents: Number of Agents
+        :param agent_classes: List of classes of the agents that should be players in the game. The length has to be
+        equal or greater than nb_agents
+        :param initial_agents_params: A list of dictionaries containing initialization parameters for agents that should
+        be initialized at the start of the simulation
+        :param cells: A Spe_ed-cells like 2D-Array that initializes the field
+        :param data_collector: Mesa data collector function
+        :param save: whether or not track the games history
         """
         super().__init__()
         self.data_collector = data_collector
@@ -75,6 +83,11 @@ class SpeedModel(Model):
             self.init_cells_and_grid(cells)
 
     def init_cells_and_grid(self, cells):
+        """
+        Initializes Mesas Grid and the Model-cells the field with the information given in cells.
+        :param cells: A Spe_ed-cells like 2D-Array that initializes the field
+        :return: None
+        """
         self.cells = np.array(cells)
         # add traces to grid
         for y in range(self.cells.shape[0]):
@@ -109,6 +122,7 @@ class SpeedModel(Model):
         """
         Only steps one specific agent. This is only for specific applications (e.g. Multi-Minimax).
         Don't use this method if not necessary since it doesn't increment all model parts (e.g. time).
+        :param cells: The agent to step
         :return: None
         """
         agent.step()
@@ -176,6 +190,11 @@ class SpeedModel(Model):
             self.grid.remove_agent(agent)
 
     def get_agent_by_id(self, unique_id):
+        """
+        Returns an agent-object by its unique_id.
+        :param unique_id: The agent id to search for
+        :return: Agent or None if no match
+        """
         for agent in self.speed_agents:
             if agent.unique_id == unique_id:
                 return agent
@@ -189,11 +208,13 @@ class SpeedAgent(Agent, ABC):
 
     def __init__(self, model, pos, direction, speed=1, active=True, trace=None):
         """
+        Initializes an Agent
         :param model: The model that the agent lives in.
         :param pos: The initial position in (x, y)
         :param direction: The initial agent direction as a Direction-object
         :param speed: The initial speed.
         :param active: Whether or not the agent is not eliminated.
+        :param trace: A list of positions that the agent occupied during the last step (just for pre-initialization)
         """
         if model is None:
             # use an empty model if an agent is used to play against an online game
@@ -218,7 +239,8 @@ class SpeedAgent(Agent, ABC):
     @abstractmethod
     def act(self, state):
         """
-        Chooses an action - should be overwritten by an agent implementation.
+        Chooses an action based on the given game state - should be overwritten by an agent implementation.
+        :param state: A Spe_ed-state-like JSON-Dict of the current game state.
         :return: Action
         """
         return NotImplementedError
@@ -320,6 +342,10 @@ class SpeedAgent(Agent, ABC):
             self.model.cells[pos[1], pos[0]] = self.unique_id
 
     def valid_speed(self):
+        """
+        Checks if the agents speed is valid (in range [1, 10]
+        :return: Whether or not the speed is valid
+        """
         return 1 <= self.speed <= 10
 
     def set_inactive(self):
@@ -340,9 +366,10 @@ class AgentTrace(Agent):
 
     def __init__(self, model, pos, origin):
         """
-        :param model: The model that the trace exists in.
+        Initializes an AgentTrace.
+        :param model: The model that the trace exists in
         :param pos: The position of the trace element in (x, y)
-        :param origin: The SpeedAgent Object that produced the trace
+        :param origin: The SpeedAgent-object that produced the trace
         """
         super().__init__(model.next_id(), model)
         self.pos = pos
@@ -355,4 +382,9 @@ class AgentTraceCollision(AgentTrace):
     """
 
     def __init__(self, model, pos):
+        """
+        A special AgentTrace that marks a collision.
+        :param model: The model that the trace exists in
+        :param pos: The position of the trace element in (x, y)
+        """
         super().__init__(model, pos, None)
