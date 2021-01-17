@@ -38,7 +38,7 @@ docker tag ghcr.io/luk-ha/liveagent:latest speedosagent
 
 ### Docker Container starten
 ```shell
-docker run -e URL="wss://msoll.de/spe_ed" -e KEY="<Your API key>" -e TIME_URL="https://msoll.de/spe_ed_time" speedosagent
+docker run -e URL="wss://msoll.de/spe_ed" -e KEY="IXT57ZEJMO6VFKF3KBZFB4LSEXBMWJ72VEYO2B6WT25UOXEIEAEN25XO" -e TIME_URL="https://msoll.de/spe_ed_time" speedosagent
 ```
 
 
