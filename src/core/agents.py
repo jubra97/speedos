@@ -604,7 +604,5 @@ class LiveAgent(SlidingWindowVoronoiAgent):
             p.terminate()
             p.join()
 
-        print(f"reached_depth: {reached_depth.value} on step {self.game_step}")
-
         self.game_step += 1
         return Action(move.value)
