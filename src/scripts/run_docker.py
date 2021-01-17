@@ -4,7 +4,7 @@ import json
 import os
 import websockets
 
-from src.agents import LiveAgent
+from src.core.agents import LiveAgent
 
 
 class RunDocker:
