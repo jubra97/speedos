@@ -493,7 +493,7 @@ class SlidingWindowVoronoiAgent(ClosestOpponentsVoronoiAgent):
     the simulation is reduced by computing a sliding window that moves with the head of our agent.
     """
 
-    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=4, min_sliding_window_size=15,
+    def __init__(self, model, pos, direction, speed=1, active=True, time_for_move=4, min_sliding_window_size=20,
                  sliding_window_size_offset=5):
         super().__init__(model, pos, direction, speed, active, time_for_move)
         self.min_sliding_window_size = min_sliding_window_size
