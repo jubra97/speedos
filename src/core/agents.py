@@ -608,39 +608,3 @@ class LiveAgent(SlidingWindowVoronoiAgent):
 
         self.game_step += 1
         return Action(move.value)
-
-
-class ParallelLiveAgent(ParallelSlidingWindowVoronoiAgent):
-    """
-    Agent that plays the online game. The agent behind this is the SlidingWindowVoronoiAgent.
-    """
-    def __init__(self, model, pos, direction, speed=1, active=True):
-        super().__init__(model, pos, direction, speed, active)
-
-    def depth_first_iterative_deepening(self, game_state):
-        def compare_depth(result):
-            if result["depth"] >= self.depth:
-                self.reached_depth = result["depth"]
-                self.move_to_make = result["move_to_make"]
-
-        p = multiprocessing.Pool()
-        # also compute minimax without voronoi for depth 1 to not crash in others if voronoi computation needs too long.
-        self.sub_evaluations = [self.win_evaluation, MultiMinimaxAgent.death_evaluation]
-        self.weights = [float("inf"), 1]
-        [p.apply_async(self.depth_first_iterative_deepening_one_depth, (copy.deepcopy(game_state), depth, False),
-                       callback=compare_depth) for depth in [2]]
-        time.sleep(0.01)  # without sleep self.sub_evaluations is changed too early.
-        self.sub_evaluations = [self.win_evaluation, self.death_evaluation, self.voronoi_evaluation]
-        self.weights = [float("inf"), 1000, 1]
-        [p.apply_async(self.depth_first_iterative_deepening_one_depth, (copy.deepcopy(game_state), depth),
-                       callback=compare_depth) for depth in range(self.start_depth, 100)]
-
-        send_time = 1
-        deadline = datetime.datetime.strptime(game_state["deadline"], "%Y-%m-%dT%H:%M:%SZ")
-        response = requests.get("https://msoll.de/spe_ed_time")
-        server_time = datetime.datetime.strptime(response.json()["time"], "%Y-%m-%dT%H:%M:%SZ")
-        av_time = (deadline - server_time).total_seconds() - send_time
-        if av_time < 1:
-            av_time = 1
-        time.sleep(av_time)
-        p.terminate()
