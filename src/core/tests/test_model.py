@@ -9,6 +9,7 @@ from src.core.agents import DummyAgent
 from src.core.utils import Direction, Action, state_to_model, get_state
 
 
+@unittest.skip("json files")
 class TestModelValidity(unittest.TestCase):
 
     def setUp(self):
