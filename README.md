@@ -10,17 +10,13 @@ We are using a multi-player extension of the well known [Minimax-Algorithm](http
 
 ## Project Structure & Architecture
 
-The project is split into the following packages: core, evaluation and scripts. The *core* package is the functional core of our project - it contains the
-Spe_ed model and all of the different player algorithms (agents); the *evaluation* package contains everything that can be used to evaluate agents; the *scripts* package contains application oriented scripts, such as a script for the online execution of our agents. The figure below shows the dependency hirarchy between the upper mentioned packages. The basic idea behind the structure is that a user can simply extend or use the scripts and evaluation tools without having to worry about the concrete core implementation.
+The project is split into the following packages: *core*, *evaluation* and *scripts*. The *core* package is the functional core of our project - it contains the reverse engineered model of Spe_ed and all of the different player algorithms (agents); the *evaluation* package contains everything that can be used to evaluate agents; the *scripts* package contains application oriented scripts, such as a script for the online execution of our agents. The figure below shows the dependency hirarchy between the upper mentioned packages. The basic idea behind the structure is that a user can simply extend or use the scripts and evaluation tools without having to worry about the concrete *core*-implementation.
 
 <p align="center"><img src="https://user-images.githubusercontent.com/72612967/115119802-8afc9d80-9faa-11eb-83df-6a6872fc4228.png" /></p>
 
-The *model* can be viewed as a black-box replica of the game Spe_ed. It provides the exact same interfaces as the original so that algorithms can use both game instances without any adjustments. We use the agent-based modelling framework [Mesa](https://mesa.readthedocs.io/en/master/) t... A simplified The model is mainly used by Muli-Minimax-agents to simulate future actions.
+The *model* can be viewed as a black-box replica of the game Spe_ed. It provides the exact same interfaces as the original so that algorithms can use both game instances without any adjustments. The model is created within the agent-based modelling framework [Mesa](https://mesa.readthedocs.io/en/master/) which provides additional tools for visualization and data science. A simplified class diagram of the model architecture can be seen in the figure below. Most importantly it contains the *SpeedModel* and an abstract *SpeedAgent*. The *SpeedModel* implements game rules and is used to control the execution of a game instance (e.g. run or step forward). An instance of the *SpeedModel* class is mainly used by Muli-Minimax-agents to simulate future actions. The *SpeedAgent* class provides the abstract method *act(state)*. Every functional agent is a subclass of *SpeedAgent* that implements this function. *act* receives a game state and returns an action. A detailed description of the game state and possible actions can be found in the [InformatiCup repository](https://github.com/informatiCup/InformatiCup2021). In case you want to implement an agent yourself, you could also take a look at [agents](https://github.com/jubra97/speedos/blob/Readme/src/core/agents.py) that we already implemented.
 
-
-## Project Architecture
-
-Das grundlegende Modell ist im Mesa-Framework geschrieben. Ein generischer Agent wird dank Modularität und Vererbung zu Agenten erweitert, die verschiedene Lösungen implementieren. Das Modell kann sehr einfach gestartet und konfiguriert werden...
+<p align="center"><img src="https://user-images.githubusercontent.com/72612967/115124512-f3f00f80-9fc2-11eb-947a-0dd8c7e343ea.png" /></p>
 
 
 ## Getting Started
