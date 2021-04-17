@@ -10,13 +10,15 @@ We are using a multi-player extension of the well known [Minimax-Algorithm](http
 
 ## Project Structure & Architecture
 
-The project is split into the following packages: *core*, *evaluation* and *scripts*. The *core* package is the functional core of our project - it contains the reverse engineered model of Spe_ed and all of the different player algorithms (agents); the *evaluation* package contains everything that can be used to evaluate agents; the *scripts* package contains application oriented scripts, such as a script for the online execution of our agents. The figure below shows the dependency hirarchy between the upper mentioned packages. The basic idea behind the structure is that a user can simply extend or use the scripts and evaluation tools without having to worry about the concrete *core*-implementation.
+The project is split into the following packages: *core*, *evaluation* and *scripts*. The *core* package is the functional core of our project - it contains a model of Spe_ed and all of the different player algorithms (agents); the *evaluation* package contains everything that can be used to evaluate agents; the *scripts* package contains application oriented scripts, such as a script for the online execution of our agents. The figure below shows the dependency hirarchy between the upper mentioned packages. The basic idea behind the structure is that a user can simply extend or use the scripts and evaluation tools without having to worry about the concrete *core*-implementation.
 
 <p align="center"><img src="https://user-images.githubusercontent.com/72612967/115119802-8afc9d80-9faa-11eb-83df-6a6872fc4228.png" /></p>
 
-The *model* can be viewed as a black-box replica of the game Spe_ed. It provides the exact same interfaces as the original so that algorithms can use both game instances without any adjustments. The model is created within the agent-based modelling framework [Mesa](https://mesa.readthedocs.io/en/master/) which provides additional tools for visualization and data science. A simplified class diagram of the model architecture can be seen in the figure below. Most importantly it contains the *SpeedModel* and an abstract *SpeedAgent*. The *SpeedModel* implements game rules and is used to control the execution of a game instance (e.g. run or step forward). An instance of the *SpeedModel* class is mainly used by Muli-Minimax-agents to simulate future actions. The *SpeedAgent* class provides the abstract method *act(state)*. Every functional agent is a subclass of *SpeedAgent* that implements this function. *act* receives a game state and returns an action. A detailed description of the game state and possible actions can be found in the [InformatiCup repository](https://github.com/informatiCup/InformatiCup2021). In case you want to implement an agent yourself, you could also take a look at [agents](https://github.com/jubra97/speedos/blob/Readme/src/core/agents.py) that we already implemented.
+The *model* can be viewed as a black-box replica of the game Spe_ed. It provides the exact same interfaces as the original so that algorithms can use both game instances without any adjustments. The model is created within the agent-based modelling framework [Mesa](https://mesa.readthedocs.io/en/master/) which provides additional tools for visualization and data science. A simplified class diagram of the model architecture can be seen in the figure below. Most importantly it contains the *SpeedModel* and an abstract *SpeedAgent*. The *SpeedModel* implements game rules and is used to control the execution of a game instance (e.g. create, run or step forward). An instance of the *SpeedModel* class is mainly used by Muli-Minimax-agents to simulate future actions and scenarios. The *SpeedAgent* class provides the abstract method *act(state)*. Every functional agent is a subclass of *SpeedAgent* that implements this function. *act* receives a game state and returns an action. A detailed description of the game state format and possible actions can be found in the [InformatiCup repository](https://github.com/informatiCup/InformatiCup2021). In case you want to implement an agent yourself, you could also take a look at [agents](https://github.com/jubra97/speedos/blob/Readme/src/core/agents.py) we already implemented.
 
 <p align="center"><img src="https://user-images.githubusercontent.com/72612967/115124512-f3f00f80-9fc2-11eb-947a-0dd8c7e343ea.png" /></p>
+
+The [res folder] contains evaluation results and recorded games from the original game. These records are mainly used to test the model and make sure that it functions exactly like the original game. All other core software parts are also tested with unit tests. Tests are placed in a subfolder (called *tests*) within the respectively tested source folder - as its standard for python unit tests. Over  core is covered 
 
 
 ## Getting Started
@@ -31,20 +33,20 @@ python setup.py build_ext --inplace
 
 ### How to use Docker
 
-Clone the repository and build a docker image:
+We use docker to deploy our software. If you want to deploy a specific version you can bould a docker image with the following commands (if you already have a local repository you can skip the *git clone* command):
 ```shell
 git clone https://github.com/jubra97/speedos.git
 cd speedos
 docker build -t speedosagent .
 ```
 
-Alternatively: Use our pre-built docker image
+If you just want to use the latest version you can simply use the pre-built docker image that we provide:
 ```shell
 docker pull ghcr.io/luk-ha/liveagent:latest
 docker tag ghcr.io/luk-ha/liveagent:latest speedosagent
 ```
 
-Start the docker container:
+To start the docker container execute the following commands:
 ```shell
 docker run -e URL="wss://msoll.de/spe_ed" -e KEY="IXT57ZEJMO6VFKF3KBZFB4LSEXBMWJ72VEYO2B6WT25UOXEIEAEN25XO" -e TIME_URL="https://msoll.de/spe_ed_time" speedosagent
 ```
