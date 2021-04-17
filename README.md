@@ -58,7 +58,7 @@ The following code snippet shows how easy it is to create and run a fully functi
 model = SpeedModel(60, 60, 2, agent_classes=[RandomAgent, SlidingWindowVoronoiMultiMiniMaxAgent], verbose=True)
 model.run_model()
 ```
-You can also have a look at the [scripts folder](https://github.com/jubra97/speedos/tree/main/src/scripts) to see how we used the project core to deploy, test and evaluate our software.
+You can also have a look at the [scripts folder](https://github.com/jubra97/speedos/tree/main/src/scripts) to see how we used the projects core to deploy, test and evaluate our software.
 
 ## Contact and Contribution
 
