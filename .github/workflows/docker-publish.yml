@@ -31,7 +31,8 @@ jobs:
             docker-compose --file docker-compose.test.yml build
             docker-compose --file docker-compose.test.yml run sut
           else
-            docker build . --file Dockerfile
+            docker build -t test-image . --file Dockerfile
+            docker run test-image sh -c "python -m unittest"
           fi
 
   # Push image to GitHub Packages.
