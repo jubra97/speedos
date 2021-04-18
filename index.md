@@ -1,3 +1,7 @@
+**<p align="center">Welcome to the world of Spe_ed, where Team Speedos rules</p>**
+
+<p align="center"><img src="https://user-images.githubusercontent.com/72612967/115153514-a634df00-a076-11eb-8afa-2624515ebb33.jpg" /></p>
+
 ## Algorithm
 
 We are using a multi-player extension of the well known [Minimax-Algorithm](https://en.wikipedia.org/wiki/Minimax) - called [Multi-Minimax](https://link.springer.com/chapter/10.1007/978-3-030-35288-2_4). The evaluation function for non-final game states is mainly based on the so called [Voronoi-Heuristic](https://www.a1k0n.net/2010/03/04/google-ai-postmortem.html). In a nutshell, the Voronoi-Heuristic calculates how many cells each player could potentially reach ahead of every other player. The returned value is then calculated as the difference betweeen the amount of cells that the maximizing and minimizing players can reach first. This encourages our player to control as much space as possible and to corral opponents. In order to deal with the variable time limit for action responses we implemented [Depth-First Iterative Deepening](https://en.wikipedia.org/wiki/Iterative_deepening_depth-first_search). Furthermore, we enhanced our approach with extensions, such as [Alpha-Beta-Pruning](https://en.wikipedia.org/wiki/Alpha%E2%80%93beta_pruning) or Wall-Hugging.
@@ -59,4 +63,3 @@ You can also have a look at the [scripts folder](https://github.com/jubra97/spee
 We welcome everyone to contribute to our project and will gladly receive and answer any suggestions or questions that you might have. We encourage you to create GitHub-Issues in case of bug encounters or feature suggestions. In other cases the best way to contact us is via [e-mail](mailto:maximilian.demmler@student.uni-augsburg.de).
 
 Our code is free to use for everybody under the conditions stated in our [license](https://github.com/jubra97/speedos/blob/main/LICENSE). However, we would like to kindly ask you to acknowledge our work if you wish to use it for research, educational or commercial purposes.
-
