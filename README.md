@@ -42,8 +42,8 @@ docker build -t speedosagent .
 
 If you just want to use the latest version you can simply use the pre-built docker image that we provide:
 ```shell
-docker pull ghcr.io/luk-ha/liveagent:latest
-docker tag ghcr.io/luk-ha/liveagent:latest speedosagent
+docker pull docker.pkg.github.com/jubra97/speedos/speedos-agent:latest
+docker tag docker.pkg.github.com/jubra97/speedos/speedos-agent:latest speedosagent
 ```
 
 To start the docker container execute the following commands:
