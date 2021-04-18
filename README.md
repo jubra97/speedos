@@ -2,6 +2,8 @@
 
 **<p align="center">Welcome to the world of Spe_ed, where Team Speedos rules</p>**
 
+<p align="center"><img src="https://user-images.githubusercontent.com/72612967/115153514-a634df00-a076-11eb-8afa-2624515ebb33.jpg" /></p>
+
 This repository contains our approach to the [InformatiCup 2021](https://github.com/informatiCup/InformatiCup2021) competition. Here we will give you a brief introduction to the underlying algorithm as well as the project structure and architecture. Furthermore, we will guide you through the installation process and provide a code example to get you started.
 
 ## Algorithm
