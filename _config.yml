@@ -1,3 +1,4 @@
 theme: jekyll-theme-cayman
 title: Test
 description: Description
+show_downloads: true
