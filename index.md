@@ -36,8 +36,8 @@ docker build -t speedosagent .
 
 If you just want to use the latest version you can simply use the pre-built docker image that we provide:
 ```shell
-docker pull ghcr.io/luk-ha/liveagent:latest
-docker tag ghcr.io/luk-ha/liveagent:latest speedosagent
+docker pull docker.pkg.github.com/jubra97/speedos/speedos-agent:latest
+docker tag docker.pkg.github.com/jubra97/speedos/speedos-agent:latest speedosagent
 ```
 
 To start the docker container execute the following commands:
@@ -54,6 +54,9 @@ model.run_model()
 ```
 You can also have a look at the [scripts folder](https://github.com/jubra97/speedos/tree/main/src/scripts) to see how we used the projects core to deploy, test and evaluate our software.
 
-## Contact and Contribution
+## Contact, Contribution & Further Use
 
-We welcome everyone to contribute to our project and will gladly receive and answer any suggestions or questions that you might have. The best way to contact us is via [e-mail](mailto:maximilian.demmler@student.uni-augsburg.de).
+We welcome everyone to contribute to our project and will gladly receive and answer any suggestions or questions that you might have. We encourage you to create GitHub-Issues in case of bug encounters or feature suggestions. In other cases the best way to contact us is via [e-mail](mailto:maximilian.demmler@student.uni-augsburg.de).
+
+Our code is free to use for everybody under the conditions stated in our [license](https://github.com/jubra97/speedos/blob/main/LICENSE). However, we would like to kindly ask you to acknowledge our work if you wish to use it for research, educational or commercial purposes.
+
