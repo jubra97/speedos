@@ -1,4 +1,4 @@
-theme: jekyll-theme-cayman
-title: Test
-description: Description
+theme: jekyll-theme-personal
+title: Informaticup2021 - UNI AUGSBURG
+description: This repository contains our approach to the InformatiCup 2021 competition. Here we will give you a brief introduction to the underlying algorithm as well as the project structure and architecture. Furthermore, we will guide you through the installation process and provide a code example to get you started.
 show_downloads: true
