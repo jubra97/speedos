@@ -1,5 +1,3 @@
-**<p align="center">Welcome to the world of Spe_ed, where Team Speedos rules</p>**
-
 <p align="center"><img src="https://user-images.githubusercontent.com/72612967/115153514-a634df00-a076-11eb-8afa-2624515ebb33.jpg" /></p>
 
 ## Algorithm
