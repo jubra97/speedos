@@ -1,0 +1,130 @@
+%Dokumentklasse
+\documentclass[a4paper,12pt]{scrreprt}
+\usepackage[left= 2.5cm,right = 2cm, bottom = 4 cm]{geometry}
+%\usepackage[onehalfspacing]{setspace}
+% ============= Packages =============
+
+% Dokumentinformationen
+\usepackage[
+	pdftitle={Titel der Abschlussarbeit},
+	pdfsubject={},
+	pdfauthor={Euer Name},
+	pdfkeywords={},	
+	%Links nicht einrahmen
+	hidelinks
+]{hyperref}
+
+
+% Standard Packages
+\usepackage[utf8]{inputenc}
+\usepackage[ngerman]{babel}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx, subfig}
+\graphicspath{{img/}}
+\usepackage{fancyhdr}
+\usepackage{lmodern}
+\usepackage{xcolor}
+\usepackage{minted}
+\usepackage{framed}
+
+\usepackage{listings}
+
+\usepackage{wrapfig}
+
+% zusätzliche Schriftzeichen der American Mathematical Society
+\usepackage{amsfonts}
+\usepackage{amsmath}
+
+%nicht einrücken nach Absatz
+%\setlength{\parindent}{0pt}
+
+
+% ============= Kopf- und Fußzeile =============
+\pagestyle{fancy}
+%
+\lhead{}
+\chead{}
+\rhead{\slshape \leftmark}
+%%
+\lfoot{}
+\cfoot{\thepage}
+\rfoot{}
+%%
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% ============= Abkürzungsverzeichnis =============
+\usepackage[acronym]{glossaries}
+\makeglossaries
+\newacronym{RL}{RL}{Reinforcement Learning}
+\newacronym{DRL}{DRL}{Deep Reinforcement Learning}
+\newacronym{DNN}{DNN}{Deep Neural Network}
+\newacronym{DQN}{DQN}{Deep Q-Network}
+\newacronym{ML}{ML}{Machine Learning}
+\newacronym{MLP}{MLP}{Multilayer Perceptron}
+\newacronym{CNN}{CNN}{Convolutional Neural Network}
+\newacronym{MDP}{MDP}{Markov Decision Process}
+\newacronym{ABM}{ABM}{Agent-Based Modelling}
+\newacronym{VFH}{VFH}{Vector Field Histogram}
+\newacronym{APF}{APF}{Artificial Potential Field}
+\newacronym{RRT}{RRT}{Rapidly-exploring Random Tree}
+\newacronym{EAPF}{EAPF}{Evolutionary Artificial Potential Field}
+\newacronym{DFID}{DFID}{Depth-First Iterative Deepening}
+
+% ============= Package Einstellungen & Sonstiges ============= 
+%Besondere Trennungen
+\hyphenation{De-zi-mal-tren-nung}
+
+%Neue Absätze
+\setlength{\parindent}{0pt}
+\KOMAoptions{parskip=half}
+
+%Code Farbe
+\definecolor{aliceblue}{rgb}{0.94, 0.97, 1.0}
+
+% ============= Dokumentbeginn =============
+
+\begin{document}
+%Seiten ohne Kopf- und Fußzeile sowie Seitenzahl
+\pagestyle{empty}
+
+\include{Titelseite}
+
+\include{Abstrakt}
+
+% Beendet eine Seite und erzwingt auf den nachfolgenden Seiten die Ausgabe aller Gleitobjekte (z.B. Abbildungen), die bislang definiert, aber noch nicht ausgegeben wurden. Dieser Befehl fügt, falls nötig, eine leere Seite ein, sodaß die nächste Seite nach den Gleitobjekten eine ungerade Seitennummer hat. 
+\cleardoubleoddpage
+
+% pagestyle für gesamtes Dokument aktivieren
+\pagestyle{fancy}
+
+%Inhaltsverzeichnis
+\tableofcontents
+
+%Verzeichnis aller Bilder
+\listoffigures
+
+%Verzeichnis aller Tabellen
+\listoftables
+
+\include{Einleitung}
+
+\include{Ansätze}
+
+\include{Voronoi}
+
+\include{Software}
+
+\include{Ergebnisse}
+
+\include{Diskussion}
+
+% Abbildungsverzeichnis
+\printglossary[type=\acronymtype, nonumberlist, title=Abkürzungsverzeichnis, toctitle=Abkürzungsverzeichnis]
+%\glsaddallunused
+
+%Literaturverzeichnis
+\bibliographystyle{unsrtdin}
+\bibliography{Literatur}
+
+\end{document}

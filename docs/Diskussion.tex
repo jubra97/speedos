@@ -1,0 +1,10 @@
+\chapter{Diskussion}
+\label{cha:Diskussion}
+
+Auf unseren Weg zur in Kapitel \ref{cha:voronoi} vorgestellten Lösung sind wir mit den drei Möglichkeiten Trajektorienplanung, \acrshort{RL} und Spieltheorie gestartet. Nachdem Trajektorienplanung kaum Strategie entwickeln konnte und \acrshort{RL} ebenfalls keine beachtlichen Erfolge vorweisen konnte, intensivierten wir einen Minimax-Ansatz aus der Spieltheorie - auch weil dieser in ähnlichen Spielen wie bspw. Schach verwendet wird. Der Ansatz wurde zum Multi-Minimax-Algorithmus von Perez und Oommen erweitert und wiederum durch Voronoi-Evaluierung sowie weitere Heuristiken ergänzt.
+
+Die zugehörige Python-Software implementiert die genannten Lösungen nach dem \acrshort{ABM}-Schema. Wichtige Bestandteile der Software werden mit Tests abgedeckt. Die verschiedenen Lösungen und Erweiterungen wurden mithilfe des Modells untereinander verglichen und ausgewertet. Auswertungen am Live-Server ergaben hohe Gewinnraten (~85\%). 
+
+In der vorliegenden Arbeit werden state-of-the-art Algorithmen aus dem Bereich Spieltheorie verwendet und für das Spiel Spe\_ed erweitert und optimiert. Der modulare und generische Code lässt sich gut erweitern. Mit der \textit{Cython}-Erweiterung wird ein Geschwindigkeitsboost erreicht, allerdings ließe sich die Geschwindigkeit (und damit die erreichte Suchtiefe) bei Verwendung einer anderen Programmiersprache vermutlich noch einmal deutlich steigern. Die Begrenzung der maximalen Geschwindigkeit des Agenten kann zudem dazu führen, dass gute Strategien ausgeschlossen werden.
+
+Zukünftige Arbeit an dieser Problemstellung könnte die Implementierung des Voronoi-Multi-Minimax Algorithmus in \textit{C++} sein. Zudem könnten ausführliche Parameterstudien zur Fenstergröße unseres SW-RG-V-Mulit-Minimax-Algorithmus die Performance noch leicht steigern. Mit viel Rechenpower und ausreichend Zeit könnte sich zudem ein \acrshort{RL}-Ansatz lohnen und bessere Resultate erzielen. Ein Vorteil des \acrshort{RL} ist, dass die Ausführung eines trainierten Modells in der Regel schnell vonstatten geht.
