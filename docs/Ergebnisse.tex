@@ -1,0 +1,86 @@
+\chapter{Ergebnisse}
+\label{cha:Ergebnisse}
+
+Um unsere Software auszuwerten haben wir sie auf dem Live-Server und mit Hilfe unseres Modells getestet. In den folgenden Unterkapiteln stellen wir die resultierenden Ergebnisse vor und interpretieren ihre Bedeutung.
+
+\section{Live-Server}
+
+Wir haben über den Verlauf des Wettbewerbs verschiedene Versionen unserer Lösung auf dem Live-Server antreten lassen. Zum einen um unsere eigene Lösung zu evaluieren und zum anderen um Informationen über das Spiel und über die Gegenspieler zu sammeln. Abbildung \ref{tab:Spiel_Parameter} zeigt die Ergebnisse der gesammelten Informationen über die Spielfeldbreite, Spielfeldhöhe und die verfügbare Zeit pro Zug. In zwei beobachteten Spielen hatte das Spielfeld eine Größe von 80x80. Da wir weder für die Breite noch für die Höhe des Spielfelds jemals einen Wert > 80 beobachtet haben, können wir annehmen, dass es sich bei 80x80 um die maximale Spielfeldgröße handelt. Das kleinste von uns beobachtete Spielfeld hatte eine Größe von 43x41. Dadurch können wir approximiert von einem kleinsten Spielfeld der Größe 41x41 ausgehen. Die von uns ermittelte durchschnittliche Zugzeit beträgt \textasciitilde10 Sekunden. Unter Berücksichtigung der Latenz nehmen wir an, dass die Zugzeiten Zufallszahlen zwischen \textasciitilde5 und \textasciitilde15 Sekunden sind.
+
+% Spiel-Parameter
+\begin{table}[t]
+	\begin{tabular}{|c|c|c|c|c|}
+		\hline 
+		Metrik & Höhe & Breite & Zugzeit \\
+		\hline\hline
+		Minimum & 41 & 41 & 3,26s \\
+		\hline 
+		Maximum & 80 & 80 & 14,94s \\
+		\hline 
+		Mittelwert & 60.13 & 61 & 9,66s \\
+		\hline
+	\end{tabular}
+	\centering
+	\caption[Auswertung der Spiel-Parameter]{Auswertung der Spiel-Parameter}
+	\label{tab:Spiel_Parameter}
+\end{table}
+
+Da unserer Lösungsansatz sowohl mit variablen Spielfeldgrößen als auch mit variablen Zugzeiten umgehen kann, haben diese Erkenntnisse keinen direkten Einfluss auf unseren Lösungsansatz. Jedoch konnten wir die gesammelten Informationen vor allem für eigene Offline-Auswertungen verwenden, um den Live-Server so gut wie möglich nachzubilden und unsere Ansätze mit verschiedenen Parametern darauf zu testen.
+
+Wir haben über die letzten beiden Wochen des Wettbewerbes auf dem zur Verfügung gestellten Live-Server eine in 120 Spielen eine Gewinnrate von 82\% erzielt. Fragwürdig ist jedoch wie aussagekräftig dieser Wert ist, da wir jeweils verschiedene Versionen unserer Lösung getestet haben, und wir bei vielen der Spielen vermuten, dass es sich bei unseren Gegnern vermehrt um Bots der Wettbewerbsveranstalter und nicht um andere Teams gehandelt hat.  
+
+
+\section{Offline-Versionsauswertung}
+
+%Versuchsaufbau (Spielfeldgröße etc + Verweis auf Data Mining, Agenten)
+Um aus den verschiedenen Versionen unserer Agenten eine finale Version für die Abgabe zu bestimmen haben wir ausgewählte Versionen im Modell gegeneinander spielen lassen. Im Folgenden werden die verwendeten Versionen beschrieben, wobei sich die Erweiterungen auf Kapitel \ref{cha:Erweiterungen} beziehen:
+\begin{itemize}
+    \item \textbf{Multi-Minimax}: Multi-Minimax-Algorithmus \cite{Perez.2019} ohne weitere Erweiterungen
+    \item \textbf{V-Multi-Minimax}: Multi-Minimax mit Voronoi-basierter Positionsauswertung und den Erweiterungen \textit{Cython}, \textit{Wall-Hugging}, \textit{Vorsortierung der Aktionen}, \textit{Endgame Erkennung}, \textit{Einschränkung der eigenen Geschwindigkeit}, \textit{\acrshort{DFID}} und \textit{Kamikaze}
+    \item \textbf{RG-V-Multi-Minimax}: V-Multi-Minimax mit der Erweiterung \textit{Reduktion der betrachteten Gegner}
+     \item \textbf{SW-RG-V-Multi-Minimax V1}: RG-V-Multi-Minimax mit der Erweiterung \textit{Sliding Window} mit Fenstergröße 40 und Offset 5
+    \item \textbf{SW-RG-V-Multi-Minimax V2}: RG-V-Multi-Minimax mit der Erweiterung \textit{Sliding Window} mit Fenstergröße 30 und Offset 3
+\end{itemize}
+
+% Fair start evaluation
+Damit die Erkenntnisse der Auswertungen im Modell möglichst gut auf die Live-Instanz von Spe\_ed übertragbar sind, haben wir die Auswertungsparameter an den Ergebnissen aus Tabelle \ref{tab:Spiel_Parameter} orientiert. Dabei muss bei den beobachteten Zugzeiten noch die mögliche Latenz berücksichtigt werden. Tabelle \ref{tab:Auswertungsparameter} zeigt die gewählten Auswertungsparameter. Wir verwenden ein Spielfeld der Größe 60x60 und wählen eine Zugzeit zufällig zwischen 5 und 15 Sekunden. Da Spiele auf Feldern dieser Größe häufig sehr lange dauern (im Schnitt ca. 6 Stunden), ist es leider nicht möglich eine hohe Anzahl an Versuchswiederholungen durchzuführen. Spe\_ed ist allerdings ein stark initialisierungsabhängiges Spiel - Spieler mit schlechten Startpositionen haben geringere Gewinnchancen. Um die Aussagekraft der Ergebnisse bei wenigen Versuchswiederholungen trotzdem hoch zu halten, initialisieren wir die Positionen nicht zufällig. Stattdessen generieren wir für alle 5 Agenten für jeweils 5 Spiele Positionen und rotieren diese innerhalb der 5 Spiele durch, sodass jeder Agent einmal von jeder Startposition aus startet. Agent 1 erhält also in Spiel 2 die Position die Agent 2 in Spiel 1 hatte und Agent 2 die alte Position von Agent 3 usw. Nach 5 gespielten Partien werden neue Positionen generiert. Somit ist die Initialisierung fair und die Auswertungen sind bereits bei geringer Anzahl an Versuchswiederholungen aussagekräftig.
+
+
+% Auswertungsparameter
+\begin{table}[t]
+	\begin{tabular}{|c|c|c|c|c|}
+		\hline 
+		Höhe & Breite & \# Spieler & Zugzeit &  Versuchswiederholungen \\
+		\hline\hline
+		60 & 60 & 5 & rand(5, 15) & 60 \\
+		\hline 
+	\end{tabular}
+	\centering
+	\caption[Auswertungsparameter]{Auswertungsparameter}
+	\label{tab:Auswertungsparameter}
+\end{table}
+
+% Ergebnisse & Interpretation & Fazit
+Tabelle \ref{tab:Versionen} zeigt die Ergebnisse der Auswertung. Dargestellt sind die Gewinnraten der einzelnen Agenten sowie deren durchschnittliche Platzierung. Die Platzierung ergibt sich über die Ausscheidungsreihenfolge, wobei der Gewinner Platz 1 erhält.\footnote{Bei Ausscheidung in der gleichen Runde wird eine Platzierung geteilt - beide erhalten die bessere Platzierung.} Es ist eindeutig erkennbar, dass sich die Voronoi-basierte Situationsauswertung auszahlt, da alle Voronoi-basierten Algorithmen den reinen Multi-Minimax-Algorithmus weit übertreffen. Die Erweiterungen \textit{Sliding Window}- und \textit{Reduktion der betrachteten Gegner} zeigen zudem wiederum eine Verbesserung im Vergleich zum V-Multi-Minimax-Agent. Das liegt daran, dass sie es schaffen die Komplexität der Situationsauswertung zu reduzieren, um eine höhere Suchtiefe zu erreichen, ohne relevante Informationen über die Umgebung zu vernachlässigen. Die beiden SW-RG-V-Multi-Minimax-Varianten schneiden am besten ab. Grund dafür ist vermutlich, dass sie im Schnitt tiefere Suchebenen als RG-V-Multi-Minimax erreichen und daher auch bei geringen Zugzeiten gut durchdachte Aktionen wählen. Interessanterweise erreicht Variante 2 (V2) der SW-RG-V-Multi-Minimax-Agenten im Schnitt eine leicht bessere Platzierung (2,1) als Variante 2 (2,3), obwohl Variante 1 eine höhere Gewinnrate erzielt (35\% zu 28,33\%). Das lässt vermuten, dass Variante 1 noch aggressiver gespielt hat, um wenn möglich einen Sieg zu erringen. Da die Wettbewerbsveranstalter die Gewinnrate als Hauptauswertungskriterium ausgeben \footnote{https://github.com/informatiCup/InformatiCup2021/issues/15} erachten wir SW-RG-V-Multi-Minimax V2 als unseren besten Agenten und verwenden diesen in der finalen Abgabe.
+
+% Evaluation
+\begin{table}[t]
+	\begin{tabular}{|c|c|c|c|c|}
+		\hline 
+		Algorithmus & Gewinnrate & Platzierung \\
+		\hline\hline
+		Multi-Minimax & 0\% & 4,22 \\
+		\hline 
+		V-Multi-Minimax & 11,67\% & 3,67 \\
+		\hline 
+		RG-V-Multi-Minimax & 25\% & 2,62 \\
+		\hline
+		SW-RG-V-Multi-Minimax V1 & 35\% & 2,3 \\
+		\hline 
+		SW-RG-V-Multi-Minimax V2 & 28,33\% & 2,1 \\
+		\hline 
+	\end{tabular}
+	\centering
+	\caption[Auswertung verschiedener Versionen]{Durchschnittswerte der Auswertung verschiedener Versionen in 60 Spielen}
+	\label{tab:Versionen}
+\end{table}

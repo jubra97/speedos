@@ -1,0 +1,29 @@
+\chapter{Einleitung}
+\label{cha:Einleitung}
+
+In den folgenden Abschnitten werden wir Ihnen den Verlauf unserer Teilnahme am \textit{InformatiCup 2021} präsentieren und einen Überblick über die weiteren Kapitel bieten. Die gesamte Ausarbeitung ist bewusst in einem lockeren Ton und mit direkter Ansprache formuliert, um den Lesefluss angenehmer zu gestalten.
+
+In den ersten Tagen nach dem Start des Wettbewerbs haben wir uns mit der Aufgabenstellung vertraut gemacht und besondere Herausforderungen erarbeitet. Dabei ist uns aufgefallen, dass \textit{Spe\_ed} im Prinzip eine Erweiterung des Spielmodus \textit{Light Cycles} aus dem Arcade-Spiel \textit{Tron}\footnote{https://de.wikipedia.org/wiki/Tron\_(Computerspiel)} ist. Wesentliche Unterschiede zu Light Cycles sind:
+\begin{itemize}
+    \item Die Spielfeldgröße ist variabel
+    \item Die Anzahl der Spieler ist variabel
+    \item Die Zeit für einen Zug ist beschränkt und variabel
+    \item Spieler können unterschiedliche Geschwindigkeiten besitzen
+    \item Alle 6 Runden entstehen Lücken in den Spuren schneller Spieler
+\end{itemize}
+Diese Erweiterungen stellen zugleich auch die besonders herausfordernden Eigenschaften des Spiels dar. Dennoch bieten bereits existierende algorithmische Ansätze für Light Cycles eine gute Grundlage für Spe\_ed. In den Kapiteln \ref{cha:Ansaetze} und \ref{cha:voronoi} gehen wir unter anderem genauer darauf ein, von welchen Light Cycles -Ansätzen wir uns inspirieren lassen haben und wie wir mit den genannten Herausforderungen umgehen.
+
+Nachdem wir uns ein gutes Bild von der Aufgabenstellung gemacht hatten, haben wir durch altbewährtes Brainstorming und Mindmapping versucht, ein möglichst breites Spektrum an Lösungsansätzen zu erarbeiten. Dabei haben wir die drei - auf der InformatiCup-Website\footnote{https://informaticup.github.io/challenges/spe-ed} angerissenen - übergeordneten Lösungsansätze \textit{Spieltheorie}, \textit{künstliche Intelligenz} und \textit{Planungsheuristik} als Ausgangspunkt verwendet. Folgende Kernideen haben wir letztendlich als am vielversprechendsten erachtet:
+\begin{itemize}
+    \item Trajektorienplanung
+    \item \acrfull{RL}
+    \item Tiefensuche
+\end{itemize}
+Diese Ansätze haben wir in der initialen Projektphase parallel näher untersucht und Prototypen implementiert. In Kapitel \ref{cha:Ansaetze} bieten wir einen Überblick über verwandte Arbeiten zu den jeweiligen Ansätzen, heben Schwächen und Stärken hervor und begründen die Entscheidung die Tiefensuche als finalen Ansatz zu wählen. Da Spe\_ed nur über eine Webschnittstelle gespielt werden kann, haben wir zu diesem Zeitpunkt außerdem entschieden, das Spiel nachzuimplementieren. Zum einen ermöglicht das unsere Ansätze gezielt und effizient offline testen zu können. Zum anderen ist es für \acrshort{RL} und Tiefensuche grundlegend notwendig Zugriff auf ein vom Algorithmus kontrollierbares Modell von Spe\_ed zu haben. Kapitel \ref{cha:software} beschäftigt sich näher mit unserer Vorgehensweise bei der Modellierung von Spe\_ed.
+
+Den größten Abschnitt des Wettbewerbs haben wir verwendet, um die Tiefensuche zu implementieren und durch Erweiterungen und Optimierungen zu ergänzen. Im Speziellen haben wir einen Multi-Minimax-Algorithmus entworfen, der die sogenannte Voronoi-Heuristik als Hauptevaluationskriterium verwendet. In Kapitel \ref{cha:voronoi} wird der Algorithmus im Detail vorgestellt.
+
+Letztendlich hatten wir gegen Ende des Wettbewerbs mehrere Varianten des Algorithmus mit unterschiedlichen Erweiterungen implementiert. Um eine finale Abgabe zu bestimmen, haben wir ausgewählte Varianten in unserem Modell gegeneinander antreten lassen und die Spiele ausgewertet. Zusätzlich haben wir erfolgreiche Varianten auch auf dem Online-Server des InformatiCup getestet. In Kapitel \ref{cha:Ergebnisse} präsentieren wir die Ergebnisse dieser Auswertungen.
+
+Alles in allem können wir behaupten, dass unsere Lösung gute Resultate erzielt. Trotzdem ist uns natürlich bewusst, dass unser Algorithmus - wie vermutlich jeder Algorithmus mit derzeitiger Rechenleistung - nicht in allen Spielpositionen die allgemeingültig beste Aktion wählt. Daher betrachten wir unseren Ansatz in Kapitel \ref{cha:Diskussion} in einem kritischen Licht und bieten Ideen für zukünftige Forschungen.
+
